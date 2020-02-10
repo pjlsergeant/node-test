@@ -1,0 +1,51 @@
+{
+  "name": "@connectedcars/test",
+  "version": "0.1.0",
+  "description": "Test utilities for Node projects",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "TZ=UTC jest",
+    "build": "npm run build:types && npm run build:js:src",
+    "build:js": "npm run build:js:src",
+    "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
+    "build:types": "tsc --emitDeclarationOnly",
+    "lint": "eslint './src/**/*.{ts,tsx}'",
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/connectedcars/node-test.git"
+  },
+  "author": "Connected Cars <oss@connectedcars.io>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/connectedcars/node-test/issues"
+  },
+  "homepage": "https://github.com/connectedcars/node-test#readme",
+  "devDependencies": {
+    "@babel/cli": "7.8.3",
+    "@babel/core": "7.8.3",
+    "@babel/plugin-proposal-class-properties": "7.8.3",
+    "@babel/plugin-proposal-nullish-coalescing-operator": "^7.8.3",
+    "@babel/plugin-proposal-numeric-separator": "7.8.3",
+    "@babel/plugin-proposal-optional-chaining": "7.8.3",
+    "@babel/preset-env": "7.8.3",
+    "@babel/preset-typescript": "7.8.3",
+    "@connectedcars/setup": "^0.5.0",
+    "@types/jest": "25.1.1",
+    "@typescript-eslint/eslint-plugin": "2.18.0",
+    "@typescript-eslint/parser": "2.18.0",
+    "babel-jest": "25.1.0",
+    "eslint": "6.8.0",
+    "eslint-config-prettier": "6.10.0",
+    "eslint-plugin-prettier": "3.1.2",
+    "eslint-plugin-simple-import-sort": "^5.0.1",
+    "jest": "25.1.0",
+    "prettier": "1.19.1",
+    "typescript": "3.7.5"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=10.15.0"
+  }
+}
