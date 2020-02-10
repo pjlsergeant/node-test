@@ -148,7 +148,6 @@ r7Iao7vY/DxzVeMOze2yO5OOOgbq8OG5HkN6UnD/PhevUbADm19khunQgTRdKZAI
 ng8OrBbXN/3vyK6QseIUz0K5mMjhzEBeFF/3o2yxnJJtz2q17Y/Ck9qshQ==
 -----END RSA PRIVATE KEY-----`
 
-// Make sure cert and key are not optional
 export type HttpsServerOptions = https.ServerOptions
 
 export class HttpsServer extends HttpServerBase<https.Server> {

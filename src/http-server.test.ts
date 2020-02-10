@@ -1,20 +1,28 @@
 import axios from 'axios'
 
-import { HttpServer } from './http-server'
+import { HttpServer, HttpServerOptions } from './http-server'
+
+export type TestHttpServerOptions = HttpServerOptions
+
+class TestHttpServer extends HttpServer {
+  constructor(options: HttpServerOptions = {}) {
+    super(options, (req, res) => {
+      // Map the responses
+      switch (req.url) {
+        case '/': {
+          return res.end('Hello world')
+        }
+        default: {
+          res.statusCode = 404
+          return res.end('Not found')
+        }
+      }
+    })
+  }
+}
 
 describe('HttpServer', () => {
-  const httpServer = new HttpServer({}, (req, res) => {
-    // Map the responses
-    switch (req.url) {
-      case '/': {
-        return res.end('Hello world')
-      }
-      default: {
-        res.statusCode = 404
-        return res.end('Not found')
-      }
-    }
-  })
+  const httpServer = new TestHttpServer()
 
   beforeAll(async () => {
     await httpServer.start()
