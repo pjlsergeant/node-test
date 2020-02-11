@@ -2,7 +2,8 @@
   "name": "@connectedcars/test",
   "version": "0.2.0",
   "description": "Test utilities for Node projects",
-  "main": "src/index.ts",
+  "main": "build/dist/src/index.js",
+  "types": "build/dist/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
     "build": "npm run build:types && npm run build:js:src",
@@ -10,7 +11,8 @@
     "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
     "build:types": "tsc --emitDeclarationOnly",
     "lint": "eslint './src/**/*.{ts,tsx}'",
-    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'"
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -49,5 +51,6 @@
   "dependencies": {},
   "engines": {
     "node": ">=10.15.0"
-  }
+  },
+  "files": ["build/dist"]
 }
