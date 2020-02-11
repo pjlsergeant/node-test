@@ -39,7 +39,7 @@ describe('HttpServer', () => {
   it('Simple GET /', async () => {
     const response = await axios.get<string>(`${httpServer.listenUrl}`)
     expect(response.data).toEqual('Hello world')
-    expect(httpServer.getStringRequests()).toMatchObject([
+    expect(httpServer.getTextRequests()).toMatchObject([
       {
         body: '',
         method: 'GET',
@@ -51,12 +51,13 @@ describe('HttpServer', () => {
   it('Simple POST /', async () => {
     const response = await axios.post<string>(`${httpServer.listenUrl}`, 'Hello')
     expect(response.data).toEqual('Hello world')
-    expect(httpServer.getStringRequests()).toMatchObject([
+    expect(httpServer.getTextRequests()).toMatchObject([
       {
         body: 'Hello',
         method: 'POST',
         url: '/'
       }
     ])
+    expect(httpServer.getTextRequests()).toMatchSnapshot()
   })
 })
