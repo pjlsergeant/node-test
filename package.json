@@ -48,6 +48,6 @@
   },
   "dependencies": {},
   "engines": {
-    "node": ">=10.15.0"
+    "node": ">=12.10.0"
   }
 }
