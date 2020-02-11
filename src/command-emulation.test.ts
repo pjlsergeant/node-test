@@ -1,9 +1,6 @@
 import { exec, ExecOptions } from 'child_process'
-import fs from 'fs'
-import { promisify } from 'util'
-const rmdirAsync = promisify(fs.rmdir)
 
-import { createTempDirectory, prependProcessPath, writeCommand } from './common'
+import { CommandEmulation } from './command-emulation'
 
 interface CommandResult {
   stdout: string
@@ -26,28 +23,19 @@ function shell(command: string, options: ExecOptions = {}): Promise<CommandResul
 }
 
 describe('ChildProcess', () => {
-  const tmpdir = createTempDirectory()
-  const oldPath = process.env.PATH
+  const commandEmulation = new CommandEmulation()
 
   beforeAll(async () => {
-    await writeCommand(`${tmpdir}/fake-global-command`, 'echo hello global')
+    await commandEmulation.registerCommand('fake-global-command', 'echo hello global')
   })
 
   afterAll(async () => {
-    await rmdirAsync(tmpdir, { recursive: true })
+    await commandEmulation.cleanup()
   })
 
-  beforeEach(() => {
-    process.env.PATH = prependProcessPath(tmpdir)
-  })
-
-  afterEach(() => {
-    process.env.PATH = oldPath
-  })
-
-  it('should run faked sh command', async () => {
-    await writeCommand(`${tmpdir}/fake-sh-command`, 'echo hello')
-    const result = await shell('fake-sh-command', { env: { ...process.env, PATH: prependProcessPath(tmpdir) } })
+  it('should run faked sh command with local path', async () => {
+    await commandEmulation.registerCommand('fake-sh-command', 'echo hello')
+    const result = await shell('fake-sh-command', { env: { ...process.env, PATH: await commandEmulation.getPath() } })
     expect(result).toMatchObject({
       code: 0,
       stdout: 'hello\n',
@@ -56,8 +44,8 @@ describe('ChildProcess', () => {
   })
 
   it('should run faked bash command', async () => {
-    await writeCommand(`${tmpdir}/fake-bash-command`, 'echo -n hello', '/bin/bash')
-    const result = await shell('fake-bash-command', { env: { ...process.env, PATH: prependProcessPath(tmpdir) } })
+    await commandEmulation.registerCommand('fake-bash-command', 'echo -n hello', '/bin/bash')
+    const result = await shell('fake-bash-command')
     expect(result).toMatchObject({
       code: 0,
       stdout: 'hello',
@@ -66,17 +54,13 @@ describe('ChildProcess', () => {
   })
 
   it('should run faked node command', async () => {
-    await writeCommand(
-      `${tmpdir}/fake-node-command`,
-      function() {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const os = require('os')
-        console.log('Hello ' + os.arch())
-      },
-      '/usr/bin/env node'
-    )
+    await commandEmulation.registerCommand('fake-node-command', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const os = require('os')
+      console.log('Hello ' + os.arch())
+    })
 
-    const result = await shell('fake-node-command', { env: { ...process.env, PATH: prependProcessPath(tmpdir) } })
+    const result = await shell('fake-node-command')
     expect(result).toMatchObject({
       code: 0,
       stdout: expect.stringMatching(/^Hello .+/),
