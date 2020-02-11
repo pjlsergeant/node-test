@@ -19,7 +19,6 @@ export class HttpsServer extends HttpServerBase<https.Server> {
   public clientCertAgent: https.Agent
 
   constructor(options: HttpsServerOptions, requestListener: HttpRequestListener) {
-    options.cert
     options = {
       cert: localhostCertificate,
       key: localhostKey,
