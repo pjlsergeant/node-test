@@ -47,13 +47,13 @@ describe('HttpServer', () => {
   })
 
   it('Simple GET / with https', async () => {
-    const response = await axios.get<string>(`${httpsServer.listenUrl}`, { httpsAgent: httpsServer.caAgent })
+    const response = await axios.get<string>(`${httpsServer.listenUrl}`, { httpsAgent: httpsServer.getCaAgent() })
     expect(response.data).toEqual('Hello world')
   })
 
   it('Simple GET / with https and client cert', async () => {
     const response = await axios.get<string>(`${httpsServer.listenUrl}/cert`, {
-      httpsAgent: httpsServer.clientCertAgent
+      httpsAgent: HttpsServer.getDefaultCertAgent()
     })
     expect(response.data).toEqual('Success for client localhost')
   })
