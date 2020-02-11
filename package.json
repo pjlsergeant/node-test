@@ -12,7 +12,10 @@
     "build:types": "tsc --emitDeclarationOnly",
     "lint": "eslint './src/**/*.{ts,tsx}'",
     "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "ci-jest": "TZ=UTC jest --silent --no-color --json 2> /dev/null; res=$?; echo; exit $res",
+    "ci-audit": "npm audit --json || true",
+    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true"
   },
   "repository": {
     "type": "git",
