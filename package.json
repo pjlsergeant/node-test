@@ -1,6 +1,6 @@
 {
   "name": "@connectedcars/test",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Test utilities for Node projects",
   "main": "build/dist/src/index.js",
   "types": "build/dist/index.d.ts",
