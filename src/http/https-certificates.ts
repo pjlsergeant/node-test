@@ -1,9 +1,4 @@
-import https from 'https'
-
-import { HttpIncomingMessage, HttpRequestListener } from './http-common'
-import { HttpServerBase } from './http-server-base'
-
-const localhostCertificate = `-----BEGIN CERTIFICATE-----
+export const localhostCertificate = `-----BEGIN CERTIFICATE-----
 MIIC/DCCAeQCCQCaq+pPRSkopTANBgkqhkiG9w0BAQsFADBAMQswCQYDVQQGEwJE
 SzESMBAGA1UEAwwJbG9jYWxob3N0MR0wGwYJKoZIhvcNAQkBFg50ZXN0QGxvY2Fs
 aG9zdDAeFw0xODAxMjEyMDU3MzJaFw0yODAxMTkyMDU3MzJaMEAxCzAJBgNVBAYT
@@ -22,7 +17,7 @@ EHtkHk+8t1IMAW2NpOfMphGMeAofko5jNTzqyGVMHK1ts6bmkq2iCv+BFJZip5EU
 ZP60ZUsPY4r3yAn0b2PvY1wmYGOgeWnBdHx593/gsUthBYoMRVPv4OTqClJTqMGk
 -----END CERTIFICATE-----`
 
-const localhostKey = `-----BEGIN PRIVATE KEY-----
+export const localhostKey = `-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCl1ZksucCvSNG3
 soZAqPnX8ZsEOMg3Xoj87hmUkfGvM6eSjE6tKb6aSH6FMvEQrCwLM9yU/8xODhKk
 WzLKGIXywF+ikH8oyZDU6hPrlwbSZlMK/1y/j1JO9DZuQR8J29RZA2n1hfkcE2pF
@@ -52,7 +47,7 @@ eG8Nor88jMLTDJoCfYWy+So=
 -----END PRIVATE KEY-----
 `
 
-const clientCaCertificate = `
+export const clientCaCertificate = `
 -----BEGIN CERTIFICATE-----
 MIICxDCCAawCCQDANCG9qwmP9jANBgkqhkiG9w0BAQsFADAkMQswCQYDVQQGEwJE
 SzEVMBMGA1UEAwwMY2EubG9jYWxob3N0MB4XDTIwMDIxMDEzMzEzNFoXDTQ3MDYy
@@ -71,7 +66,7 @@ vEXV3BmGcPUwhc3sqJPVGFJP+oQ1sCOcGSLGcObjKMxkW/nBlM4NWIEgIXf/tWSA
 u7l1KsCkQNS18HCjg555PI0CbaUQCl/ky7wIELtxIVGDwuNjXQ3j/A==
 -----END CERTIFICATE-----`
 
-const clientCertificate = `
+export const clientCertificate = `
 -----BEGIN CERTIFICATE-----
 MIIDwTCCAqkCCQCvT9HEoWZaOTANBgkqhkiG9w0BAQUFADAkMQswCQYDVQQGEwJE
 SzEVMBMGA1UEAwwMY2EubG9jYWxob3N0MB4XDTIwMDIxMDEzMzI0MFoXDTQ3MDYy
@@ -96,7 +91,7 @@ U3AhxLThOdrz3oqDM6L27tHJ8bh/pP/3uG/gvHnueI0Cyitybo0gYLov3p8oRO4T
 TCeS8cg=
 -----END CERTIFICATE-----`
 
-const clientKey = `-----BEGIN RSA PRIVATE KEY-----
+export const clientKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIJJwIBAAKCAgEA2kJqyF2BiVkhI3Ku7UQhnwfFS2lhhIWufMqCMN1NTOf0pJ7j
 Zv4y/nHplP/wPYUS6JVicBWtiriFVcPduL9YqEYji2l1aTrUn42o3BiMhpLrrWvH
 bpDarTyabe+ApBBDNpCyndx6Iq0U76SmK0EUYGOu2og8kab7u/Qb6d1ogJhdydWP
@@ -147,40 +142,3 @@ vwNaL/+dFfJ8cmi9FYaadRqQ59RZZg7J5KK80fFyzsat1LWUIXHsEYdZ0T0hip2r
 r7Iao7vY/DxzVeMOze2yO5OOOgbq8OG5HkN6UnD/PhevUbADm19khunQgTRdKZAI
 ng8OrBbXN/3vyK6QseIUz0K5mMjhzEBeFF/3o2yxnJJtz2q17Y/Ck9qshQ==
 -----END RSA PRIVATE KEY-----`
-
-export type HttpsServerOptions = https.ServerOptions
-
-export class HttpsServer extends HttpServerBase<https.Server> {
-  public cert: HttpsServerOptions['cert']
-  public key: HttpsServerOptions['key']
-  public caAgent: https.Agent
-  public clientCertAgent: https.Agent
-
-  constructor(options: HttpsServerOptions, requestListener: HttpRequestListener) {
-    options.cert
-    options = {
-      cert: localhostCertificate,
-      key: localhostKey,
-      ca: clientCaCertificate,
-      requestCert: true,
-      rejectUnauthorized: false, // so we can do own error handling
-      ...options
-    }
-    super(
-      'https://localhost',
-      https.createServer(options, (req, res) => {
-        this.handleRequest(req as HttpIncomingMessage, res, requestListener)
-      })
-    )
-    this.cert = options.cert
-    this.key = options.key
-    this.caAgent = new https.Agent({
-      ca: options.cert
-    })
-    this.clientCertAgent = new https.Agent({
-      ca: options.cert,
-      key: clientKey,
-      cert: clientCertificate
-    })
-  }
-}

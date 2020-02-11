@@ -1,6 +1,6 @@
 import http from 'http'
 
-import { Json } from './common'
+import { Json } from '../common'
 
 export type HttpIncomingMessage = http.IncomingMessage & Required<Pick<http.IncomingMessage, 'method' | 'url'>>
 

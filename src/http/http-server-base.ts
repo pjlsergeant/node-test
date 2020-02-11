@@ -8,7 +8,7 @@ import {
   HttpRequest,
   HttpRequestListener,
   HttpServerError,
-  HttpStringRequest,
+  HttpStringRequest as HttpTextRequest,
   readBody
 } from './http-common'
 
@@ -47,8 +47,6 @@ export class HttpServerBase<T extends http.Server | https.Server> {
     this.httpServer.on('listening', () => {
       const addressInfo = this.httpServer.address() as net.AddressInfo
       this.listenPort = addressInfo.port
-
-      // TODO: Validate if https
       this.listenUrl = `${this.baseUrl}:${this.listenPort}`
     })
     return new Promise(resolve => {
@@ -74,7 +72,7 @@ export class HttpServerBase<T extends http.Server | https.Server> {
     })
   }
 
-  public getStringRequests(): HttpStringRequest[] {
+  public getTextRequests(): HttpTextRequest[] {
     return this.requests.map(req => {
       return { ...req, body: req.body.toString('utf8') }
     })
@@ -89,10 +87,12 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   }
 
   protected async saveRequest(req: HttpIncomingMessage): Promise<void> {
+    // Make sure the host header is always stable
+    const headers = { ...req.headers, host: 'localhost' }
     this.requests.push({
       method: req.method,
       url: req.url,
-      headers: req.headers,
+      headers: headers,
       body: await readBody(req)
     })
   }
