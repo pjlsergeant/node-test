@@ -3,10 +3,10 @@ import tls from 'tls'
 
 import { WebServer, WebServerOptions } from './web-server'
 
-export type TestHttpsServerOptions = WebServerOptions
+export type TestWebServerOptions = WebServerOptions
 
 class TestWebServer extends WebServer {
-  constructor(options: TestHttpsServerOptions = {}) {
+  constructor(options: TestWebServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {
