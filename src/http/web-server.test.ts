@@ -1,11 +1,11 @@
 import axios from 'axios'
 import tls from 'tls'
 
-import { HttpsServer, HttpsServerOptions } from './https-server'
+import { WebServer, WebServerOptions } from './web-server'
 
-export type TestHttpsServerOptions = HttpsServerOptions
+export type TestHttpsServerOptions = WebServerOptions
 
-class TestHttpsServer extends HttpsServer {
+class TestWebServer extends WebServer {
   constructor(options: TestHttpsServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
@@ -32,29 +32,35 @@ class TestHttpsServer extends HttpsServer {
 }
 
 describe('HttpServer', () => {
-  const httpsServer = new TestHttpsServer()
+  const webServer = new TestWebServer()
 
   beforeAll(async () => {
-    await httpsServer.start()
+    await webServer.start()
   })
 
   afterAll(async () => {
-    await httpsServer.stop()
+    await webServer.stop()
   })
 
   afterEach(async () => {
-    httpsServer.clearRequests()
+    webServer.clearRequests()
+  })
+
+  it('Simple GET / with http', async () => {
+    const response = await axios.get<string>(`${webServer.httpListenUrl}`)
+    expect(response.data).toEqual('Hello world')
   })
 
   it('Simple GET / with https', async () => {
-    const response = await axios.get<string>(`${httpsServer.listenUrl}`, { httpsAgent: httpsServer.getCaAgent() })
+    const response = await axios.get<string>(`${webServer.httpsListenUrl}`, { httpsAgent: webServer.getCaAgent() })
     expect(response.data).toEqual('Hello world')
   })
 
   it('Simple GET / with https and client cert', async () => {
-    const response = await axios.get<string>(`${httpsServer.listenUrl}/cert`, {
-      httpsAgent: HttpsServer.getDefaultCertAgent()
+    const response = await axios.get<string>(`${webServer.httpsListenUrl}/cert`, {
+      httpsAgent: WebServer.getDefaultCertAgent()
     })
+
     expect(response.data).toEqual('Success for client localhost')
   })
 })

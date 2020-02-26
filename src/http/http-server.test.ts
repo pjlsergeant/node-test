@@ -5,7 +5,7 @@ import { HttpServer, HttpServerOptions } from './http-server'
 export type TestHttpServerOptions = HttpServerOptions
 
 class TestHttpServer extends HttpServer {
-  constructor(options: HttpServerOptions = {}) {
+  constructor(options: TestHttpServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {
