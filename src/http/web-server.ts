@@ -52,15 +52,21 @@ export class WebServer {
   }
 
   public getJsonRequests(): HttpJsonRequest[] {
-    return [...this.httpServer.getJsonRequests(), ...this.httpsServer.getJsonRequests()]
+    return [...this.httpServer.getJsonRequests(), ...this.httpsServer.getJsonRequests()].sort(
+      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
+    )
   }
 
   public getTextRequests(): HttpTextRequest[] {
-    return [...this.httpServer.getTextRequests(), ...this.httpsServer.getTextRequests()]
+    return [...this.httpServer.getTextRequests(), ...this.httpsServer.getTextRequests()].sort(
+      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
+    )
   }
 
   public getRequests(): HttpRequest[] {
-    return [...this.httpServer.getRequests(), ...this.httpsServer.getRequests()]
+    return [...this.httpServer.getRequests(), ...this.httpsServer.getRequests()].sort(
+      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
+    )
   }
 
   public clearRequests(): void {

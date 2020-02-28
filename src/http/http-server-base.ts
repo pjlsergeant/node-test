@@ -94,7 +94,8 @@ export class HttpServerBase<T extends http.Server | https.Server> {
       method: req.method,
       url: req.url,
       headers: headers,
-      body: await readBody(req)
+      body: await readBody(req),
+      receivedAt: new Date()
     })
   }
 

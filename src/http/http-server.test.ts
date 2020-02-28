@@ -58,6 +58,5 @@ describe('HttpServer', () => {
         url: '/'
       }
     ])
-    expect(httpServer.getTextRequests()).toMatchSnapshot()
   })
 })

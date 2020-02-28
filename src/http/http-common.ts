@@ -15,6 +15,7 @@ export interface HttpRequest {
   url: string
   headers: http.IncomingHttpHeaders
   body: Buffer
+  receivedAt: Date
 }
 
 export type HttpJsonRequest = Omit<HttpRequest, 'body'> & {
