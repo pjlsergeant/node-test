@@ -33,7 +33,7 @@ describe('HttpServer', () => {
   })
 
   afterEach(async () => {
-    httpServer.clearRequests()
+    httpServer.reset()
   })
 
   it('Simple GET /', async () => {
@@ -58,5 +58,7 @@ describe('HttpServer', () => {
         url: '/'
       }
     ])
+    // We have this to test that http requests are stable
+    expect(httpServer.getTextRequests()).toMatchSnapshot()
   })
 })

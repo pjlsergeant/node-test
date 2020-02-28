@@ -1,11 +1,15 @@
 import https from 'https'
 
-import { HttpJsonRequest, HttpRequest, HttpRequestListener, HttpTextRequest } from './http-common'
+import { HttpIncomingMessage, HttpJsonRequest, HttpRequest, HttpRequestListener, HttpTextRequest } from './http-common'
 import { HttpServer, HttpServerOptions } from './http-server'
 import { HttpsServer, HttpsServerOptions } from './https-server'
 
 export type WebServerOptions = Omit<HttpsServerOptions, 'listenPort'> &
-  Omit<HttpServerOptions, 'listenPort'> & { httpPort?: number; httpsPort?: number }
+  Omit<HttpServerOptions, 'listenPort'> & {
+    httpPort?: number
+    httpsPort?: number
+    requestIdGenerator?: (req: HttpIncomingMessage) => number
+  }
 
 export class WebServer {
   private httpServer: HttpServer
@@ -13,10 +17,23 @@ export class WebServer {
 
   public httpListenUrl = ''
   public httpsListenUrl = ''
+  private requestId = 1
 
   constructor(options: WebServerOptions, requestListener: HttpRequestListener) {
-    const httpOption = { ...options, listenPort: options.httpPort }
-    const httpsOption = { ...options, listenPort: options.httpsPort }
+    const httpOption = {
+      requestIdGenerator: () => {
+        return this.requestId++
+      },
+      ...options,
+      listenPort: options.httpPort
+    }
+    const httpsOption = {
+      requestIdGenerator: () => {
+        return this.requestId++
+      },
+      ...options,
+      listenPort: options.httpsPort
+    }
     this.httpServer = new HttpServer(httpOption, requestListener)
     this.httpsServer = new HttpsServer(httpsOption, requestListener)
   }
@@ -52,25 +69,24 @@ export class WebServer {
   }
 
   public getJsonRequests(): HttpJsonRequest[] {
-    return [...this.httpServer.getJsonRequests(), ...this.httpsServer.getJsonRequests()].sort(
-      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
-    )
+    return [...this.httpServer.getJsonRequests(), ...this.httpsServer.getJsonRequests()].sort((a, b) => a.id - b.id)
   }
 
   public getTextRequests(): HttpTextRequest[] {
-    return [...this.httpServer.getTextRequests(), ...this.httpsServer.getTextRequests()].sort(
-      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
-    )
+    return [...this.httpServer.getTextRequests(), ...this.httpsServer.getTextRequests()].sort((a, b) => a.id - b.id)
   }
 
   public getRequests(): HttpRequest[] {
-    return [...this.httpServer.getRequests(), ...this.httpsServer.getRequests()].sort(
-      (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
-    )
+    return [...this.httpServer.getRequests(), ...this.httpsServer.getRequests()].sort((a, b) => a.id - b.id)
   }
 
   public clearRequests(): void {
     this.httpServer.clearRequests()
     this.httpsServer.clearRequests()
+  }
+
+  public reset(): void {
+    this.httpServer.reset()
+    this.httpsServer.reset()
   }
 }

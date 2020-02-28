@@ -18,6 +18,7 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   private baseUrl: string
   protected httpServer: T
   protected requests: HttpRequest[] = []
+  protected requestId = 1
 
   constructor(baseUrl: string, httpServer: T, listenPort = 0) {
     this.httpServer = httpServer
@@ -28,10 +29,11 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   protected handleRequest(
     req: HttpIncomingMessage,
     res: http.ServerResponse,
-    requestListener: HttpRequestListener
+    requestListener: HttpRequestListener,
+    requestId = this.requestId++
   ): void {
     try {
-      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
+      Promise.all([this.saveRequest(req, requestId), Promise.resolve(requestListener(req, res))]).catch(e => {
         this.handleError(res, e)
       })
     } catch (e) {
@@ -87,15 +89,20 @@ export class HttpServerBase<T extends http.Server | https.Server> {
     this.requests = []
   }
 
-  protected async saveRequest(req: HttpIncomingMessage): Promise<void> {
+  public reset(): void {
+    this.clearRequests()
+    this.requestId = 1
+  }
+
+  protected async saveRequest(req: HttpIncomingMessage, id: number): Promise<void> {
     // Make sure the host header is always stable
     const headers = { ...req.headers, host: 'localhost' }
     this.requests.push({
+      id: id,
       method: req.method,
       url: req.url,
       headers: headers,
-      body: await readBody(req),
-      receivedAt: new Date()
+      body: await readBody(req)
     })
   }
 

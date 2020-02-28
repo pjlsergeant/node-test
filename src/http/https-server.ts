@@ -10,7 +10,10 @@ import {
   localhostKey
 } from './https-certificates'
 
-export type HttpsServerOptions = https.ServerOptions & { listenPort?: number }
+export type HttpsServerOptions = https.ServerOptions & {
+  listenPort?: number
+  requestIdGenerator?: (req: HttpIncomingMessage) => number
+}
 
 export class HttpsServer extends HttpServerBase<https.Server> {
   public cert: HttpsServerOptions['cert']
@@ -28,7 +31,10 @@ export class HttpsServer extends HttpServerBase<https.Server> {
     super(
       'https://localhost',
       https.createServer(options, (req, res) => {
-        this.handleRequest(req as HttpIncomingMessage, res, requestListener)
+        const requestId = options.requestIdGenerator
+          ? options.requestIdGenerator(req as HttpIncomingMessage)
+          : undefined
+        this.handleRequest(req as HttpIncomingMessage, res, requestListener, requestId)
       }),
       options.listenPort
     )

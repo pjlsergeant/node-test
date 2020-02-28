@@ -43,7 +43,7 @@ describe('HttpServer', () => {
   })
 
   afterEach(async () => {
-    webServer.clearRequests()
+    webServer.reset()
   })
 
   it('Simple GET / with http', async () => {

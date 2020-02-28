@@ -43,7 +43,7 @@ describe('HttpServer', () => {
   })
 
   afterEach(async () => {
-    httpsServer.clearRequests()
+    httpsServer.reset()
   })
 
   it('Simple GET / with https', async () => {

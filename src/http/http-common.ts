@@ -11,11 +11,11 @@ export class HttpServerError extends Error {
 }
 
 export interface HttpRequest {
+  id: number
   method: string
   url: string
   headers: http.IncomingHttpHeaders
   body: Buffer
-  receivedAt: Date
 }
 
 export type HttpJsonRequest = Omit<HttpRequest, 'body'> & {
