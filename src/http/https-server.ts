@@ -1,6 +1,6 @@
 import https from 'https'
 
-import { HttpIncomingMessage, HttpRequestListener } from './http-common'
+import { HttpIncomingMessage, HttpRequest, HttpRequestListener } from './http-common'
 import { HttpServerBase } from './http-server-base'
 import {
   clientCaCertificate,
@@ -12,7 +12,7 @@ import {
 
 export type HttpsServerOptions = https.ServerOptions & {
   listenPort?: number
-  requestIdGenerator?: (req: HttpIncomingMessage) => number
+  requests?: HttpRequest[]
 }
 
 export class HttpsServer extends HttpServerBase<https.Server> {
@@ -31,12 +31,10 @@ export class HttpsServer extends HttpServerBase<https.Server> {
     super(
       'https://localhost',
       https.createServer(options, (req, res) => {
-        const requestId = options.requestIdGenerator
-          ? options.requestIdGenerator(req as HttpIncomingMessage)
-          : undefined
-        this.handleRequest(req as HttpIncomingMessage, res, requestListener, requestId)
+        this.handleRequest(req as HttpIncomingMessage, res, requestListener)
       }),
-      options.listenPort
+      options.listenPort,
+      options.requests
     )
     this.cert = options.cert
     this.key = options.key

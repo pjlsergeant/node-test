@@ -11,7 +11,6 @@ export class HttpServerError extends Error {
 }
 
 export interface HttpRequest {
-  id: number
   method: string
   url: string
   headers: http.IncomingHttpHeaders

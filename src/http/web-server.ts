@@ -1,6 +1,6 @@
 import https from 'https'
 
-import { HttpIncomingMessage, HttpJsonRequest, HttpRequest, HttpRequestListener, HttpTextRequest } from './http-common'
+import { HttpJsonRequest, HttpRequest, HttpRequestListener, HttpTextRequest } from './http-common'
 import { HttpServer, HttpServerOptions } from './http-server'
 import { HttpsServer, HttpsServerOptions } from './https-server'
 
@@ -8,7 +8,6 @@ export type WebServerOptions = Omit<HttpsServerOptions, 'listenPort'> &
   Omit<HttpServerOptions, 'listenPort'> & {
     httpPort?: number
     httpsPort?: number
-    requestIdGenerator?: (req: HttpIncomingMessage) => number
   }
 
 export class WebServer {
@@ -17,20 +16,16 @@ export class WebServer {
 
   public httpListenUrl = ''
   public httpsListenUrl = ''
-  private requestId = 1
+  private requests: HttpRequest[] = []
 
   constructor(options: WebServerOptions, requestListener: HttpRequestListener) {
     const httpOption = {
-      requestIdGenerator: () => {
-        return this.requestId++
-      },
+      requests: this.requests,
       ...options,
       listenPort: options.httpPort
     }
     const httpsOption = {
-      requestIdGenerator: () => {
-        return this.requestId++
-      },
+      requests: this.requests,
       ...options,
       listenPort: options.httpsPort
     }
@@ -69,15 +64,15 @@ export class WebServer {
   }
 
   public getJsonRequests(): HttpJsonRequest[] {
-    return [...this.httpServer.getJsonRequests(), ...this.httpsServer.getJsonRequests()].sort((a, b) => a.id - b.id)
+    return this.httpServer.getJsonRequests()
   }
 
   public getTextRequests(): HttpTextRequest[] {
-    return [...this.httpServer.getTextRequests(), ...this.httpsServer.getTextRequests()].sort((a, b) => a.id - b.id)
+    return this.httpServer.getTextRequests()
   }
 
   public getRequests(): HttpRequest[] {
-    return [...this.httpServer.getRequests(), ...this.httpsServer.getRequests()].sort((a, b) => a.id - b.id)
+    return this.httpServer.getRequests()
   }
 
   public clearRequests(): void {

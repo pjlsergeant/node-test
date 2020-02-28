@@ -12,28 +12,28 @@ import {
   readBody
 } from './http-common'
 
-export class HttpServerBase<T extends http.Server | https.Server> {
+export abstract class HttpServerBase<T extends http.Server | https.Server> {
   public listenPort: number
   public listenUrl = ''
   private baseUrl: string
   protected httpServer: T
-  protected requests: HttpRequest[] = []
-  protected requestId = 1
+  protected requests: HttpRequest[]
 
-  constructor(baseUrl: string, httpServer: T, listenPort = 0) {
+  // TODO: Move to options instead of adding more params
+  constructor(baseUrl: string, httpServer: T, listenPort = 0, requests: HttpRequest[] = []) {
     this.httpServer = httpServer
     this.baseUrl = baseUrl
     this.listenPort = listenPort
+    this.requests = requests
   }
 
   protected handleRequest(
     req: HttpIncomingMessage,
     res: http.ServerResponse,
-    requestListener: HttpRequestListener,
-    requestId = this.requestId++
+    requestListener: HttpRequestListener
   ): void {
     try {
-      Promise.all([this.saveRequest(req, requestId), Promise.resolve(requestListener(req, res))]).catch(e => {
+      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
         this.handleError(res, e)
       })
     } catch (e) {
@@ -86,19 +86,17 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   }
 
   public clearRequests(): void {
-    this.requests = []
+    this.requests.length = 0
   }
 
   public reset(): void {
     this.clearRequests()
-    this.requestId = 1
   }
 
-  protected async saveRequest(req: HttpIncomingMessage, id: number): Promise<void> {
+  protected async saveRequest(req: HttpIncomingMessage): Promise<void> {
     // Make sure the host header is always stable
     const headers = { ...req.headers, host: 'localhost' }
     this.requests.push({
-      id: id,
       method: req.method,
       url: req.url,
       headers: headers,

@@ -69,7 +69,8 @@ describe('HttpServer', () => {
     await axios.get<string>(`${webServer.httpListenUrl}?2`)
     await axios.get<string>(`${webServer.httpsListenUrl}?3`, { httpsAgent: webServer.getCaAgent() })
     await axios.get<string>(`${webServer.httpListenUrl}?4`)
-    expect(webServer.getTextRequests()).toMatchObject([
+    const requests = webServer.getTextRequests()
+    expect(requests).toMatchObject([
       {
         url: '/?1'
       },
