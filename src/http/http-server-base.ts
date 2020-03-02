@@ -4,24 +4,27 @@ import net from 'net'
 
 import {
   HttpIncomingMessage,
-  HttpJSONRequest as HttpJsonRequest,
+  HttpJsonRequest,
   HttpRequest,
   HttpRequestListener,
   HttpServerError,
-  HttpStringRequest as HttpTextRequest,
+  HttpTextRequest,
   readBody
 } from './http-common'
 
-export class HttpServerBase<T extends http.Server | https.Server> {
-  public listenPort = 0
+export abstract class HttpServerBase<T extends http.Server | https.Server> {
+  public listenPort: number
   public listenUrl = ''
   private baseUrl: string
   protected httpServer: T
-  protected requests: HttpRequest[] = []
+  protected requests: HttpRequest[]
 
-  constructor(baseUrl: string, httpServer: T) {
+  // TODO: Move to options instead of adding more params
+  constructor(baseUrl: string, httpServer: T, listenPort = 0, requests: HttpRequest[] = []) {
     this.httpServer = httpServer
     this.baseUrl = baseUrl
+    this.listenPort = listenPort
+    this.requests = requests
   }
 
   protected handleRequest(
@@ -83,7 +86,11 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   }
 
   public clearRequests(): void {
-    this.requests = []
+    this.requests.length = 0
+  }
+
+  public reset(): void {
+    this.clearRequests()
   }
 
   protected async saveRequest(req: HttpIncomingMessage): Promise<void> {

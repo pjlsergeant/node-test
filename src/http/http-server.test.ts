@@ -5,7 +5,7 @@ import { HttpServer, HttpServerOptions } from './http-server'
 export type TestHttpServerOptions = HttpServerOptions
 
 class TestHttpServer extends HttpServer {
-  constructor(options: HttpServerOptions = {}) {
+  constructor(options: TestHttpServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {
@@ -33,7 +33,7 @@ describe('HttpServer', () => {
   })
 
   afterEach(async () => {
-    httpServer.clearRequests()
+    httpServer.reset()
   })
 
   it('Simple GET /', async () => {
@@ -58,6 +58,7 @@ describe('HttpServer', () => {
         url: '/'
       }
     ])
+    // We have this to test that http requests are stable
     expect(httpServer.getTextRequests()).toMatchSnapshot()
   })
 })

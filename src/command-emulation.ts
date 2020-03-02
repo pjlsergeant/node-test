@@ -9,7 +9,7 @@ const chmodAsync = promisify(fs.chmod)
 
 import { createTempDirectory } from './common'
 
-interface CommandEmulationOptions {
+export interface CommandEmulationOptions {
   overridePath: boolean
 }
 
