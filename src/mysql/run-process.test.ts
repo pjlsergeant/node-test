@@ -3,6 +3,11 @@ import { RunProcess } from './run-process'
 
 describe('MySQLServer', () => {
   const commandEmulation = new CommandEmulation()
+
+  afterAll(async () => {
+    await commandEmulation.cleanup()
+  })
+
   it('Start process and wait for exit', async () => {
     await commandEmulation.registerCommand('my-hello', () => {
       console.log('hello')
@@ -43,7 +48,7 @@ describe('MySQLServer', () => {
       console.log('Started...')
     })
 
-    const cmd = new RunProcess('my-hello', [])
+    const cmd = new RunProcess('my-hello')
     //cmd.stdout?.on('data', chunk => {
     //  process.stdout.write(chunk)
     //})
