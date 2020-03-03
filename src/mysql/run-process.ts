@@ -21,6 +21,8 @@ async function waitFor<T>(promise: Promise<T>, timeout: number): Promise<boolean
 type ExitInformation = { code: number | null; signal: NodeJS.Signals | null }
 
 export class TimeoutError extends Error {}
+export class ExitBeforeOutputMatchError extends Error {}
+export class StopBecauseOfOutputError extends Error {}
 
 export class RunProcess {
   public cmd: ChildProcess
@@ -29,8 +31,10 @@ export class RunProcess {
   public stdout: ChildProcess['stdout']
   public stderr: ChildProcess['stderr']
   public running: boolean
+  public stopReason: Error | null = null
 
   private exitPromise: Promise<ExitInformation>
+  private errorListeners: Array<(err: Error) => void> = []
 
   constructor(command: string, args?: string[], options?: SpawnOptionsWithoutStdio) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
@@ -62,7 +66,8 @@ export class RunProcess {
     this.exitPromise = Promise.all([exitPromise, stdoutPromise, stderrPromise]).then(result => result[0])
   }
 
-  async stop(sigKillTimeout = 3000): Promise<ExitInformation> {
+  async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
+    this.stopReason = error || null
     if (this.running) {
       this.cmd.kill('SIGTERM')
     }
@@ -73,16 +78,54 @@ export class RunProcess {
     return await this.exitPromise
   }
 
-  async waitForOutput(
-    regex: RegExp,
-    timeout = 0,
-    outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
-  ): Promise<void> {
+  async waitForExit(timeout = 0): Promise<ExitInformation> {
     return new Promise(resolve => {
       let timeoutHandle: NodeJS.Timeout | null = null
       if (timeout) {
         timeoutHandle = setTimeout((_, reject) => reject(new TimeoutError()), timeout)
       }
+      this.cmd.on('exit', (code, signal) => {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle)
+        }
+        resolve({ code, signal })
+      })
+    })
+  }
+
+  stopOnOutput(
+    regex: RegExp,
+    errorMessage?: string,
+    timeout = 0,
+    outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
+  ): void {
+    // TODO: Kill process and set error
+    this.waitForOutput(regex, timeout, outputs)
+      .then(() => {
+        return this.stop(1000, new StopBecauseOfOutputError(errorMessage))
+      })
+      .catch(() => {
+        // Ignore other errors as we only need to kill the process if
+      })
+  }
+
+  async waitForOutput(
+    regex: RegExp,
+    timeout = 0,
+    outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Throw if the process exist before finding the output
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.exitPromise.then(() => {
+        reject(new ExitBeforeOutputMatchError())
+      })
+
+      let timeoutHandle: NodeJS.Timeout | null = null
+      if (timeout) {
+        timeoutHandle = setTimeout((_, reject) => reject(new TimeoutError()), timeout)
+      }
+
       if (outputs.includes('stdout')) {
         let data = ''
         this.stdout?.on('data', chunk => {
@@ -116,14 +159,23 @@ export class RunProcess {
   on(event: 'exit', listener: (code: number | null, signal: NodeJS.Signals | null) => void): this
   on(event: 'message', listener: (message: Serializable, sendHandle: SendHandle) => void): this
   on(event: string, listener: (...args: any[]) => void): this {
-    if (event === 'exit') {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.exitPromise.then(res => {
-        listener(res.code, res.signal)
-      })
+    switch (event) {
+      case 'exit': {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.exitPromise.then(res => {
+          listener(res.code, res.signal)
+        })
+        break
+      }
+      case 'error': {
+        this.errorListeners.push(listener)
+        this.cmd.on(event, listener)
+        break
+      }
+      default: {
+        this.cmd.on(event, listener)
+      }
     }
-
-    this.cmd.on(event, listener)
     return this
   }
 
