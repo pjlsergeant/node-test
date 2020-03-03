@@ -68,6 +68,26 @@ describe('ChildProcess', () => {
     })
   })
 
+  it('should run faked node command with inject data', async () => {
+    const outsideData = 'stuff'
+    await commandEmulation.registerCommand(
+      'fake-node-command',
+      data => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        console.log('Hello ' + data)
+      },
+      null,
+      outsideData
+    )
+
+    const result = await shell('fake-node-command')
+    expect(result).toMatchObject({
+      code: 0,
+      stdout: expect.stringMatching(/^Hello stuff/),
+      stderr: ''
+    })
+  })
+
   it('should run faked command from global PATH', async () => {
     const result = await shell('fake-global-command')
     expect(result).toMatchObject({

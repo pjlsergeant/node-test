@@ -7,14 +7,14 @@ const rmdirAsync = promisify(fs.rmdir)
 const writeFileAsync = promisify(fs.writeFile)
 const chmodAsync = promisify(fs.chmod)
 
-import { createTempDirectory } from './common'
+import { createTempDirectory, Json } from './common'
 
 interface CommandEmulationOptions {
   overridePath: boolean
 }
 
 export class CommandEmulation {
-  public tmpdir!: string
+  private tmpdir!: string
   private oldPath!: string
   private newPath!: string
   private commands: string[] = []
@@ -47,7 +47,12 @@ export class CommandEmulation {
     this.initPromise = this.init(options)
   }
 
-  async registerCommand(cmd: string, script: string | Function, interpreter = '/bin/sh'): Promise<void> {
+  async registerCommand<T = Json>(
+    cmd: string,
+    script: string | ((data: T) => void),
+    interpreter: string | null = '/bin/sh',
+    data: Json = {}
+  ): Promise<void> {
     await this.initPromise // Make sure init has finished
 
     const path = `${this.tmpdir}/${cmd}`
@@ -55,8 +60,16 @@ export class CommandEmulation {
 
     // Handle JS function
     if (typeof script === 'function') {
-      script = `const main = ${script.toString()}\nmain()`
-      if (interpreter === '/bin/sh') {
+      const dataString = JSON.stringify(data)
+        .replace(/\\/gs, '\\\\')
+        .replace(/`/gs, '\\`')
+      const scriptLines = [
+        `const jsonData = JSON.parse(\`${dataString}\`)`,
+        `const main = ${script.toString()}`,
+        `main(jsonData)`
+      ]
+      script = scriptLines.join('\n')
+      if (interpreter === null || interpreter === '/bin/sh') {
         interpreter = '/usr/bin/env node'
       }
     }
@@ -76,6 +89,11 @@ export class CommandEmulation {
     this.initPromise = Promise.reject(new Error(`Need to run setup again`)).catch(() => {
       // Do nothing as we will throw at later calls
     })
+  }
+
+  async getTmpdir(): Promise<string> {
+    await this.initPromise // Make sure init has finished
+    return this.tmpdir
   }
 
   async getPath(): Promise<string> {
