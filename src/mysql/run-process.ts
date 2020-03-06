@@ -18,7 +18,7 @@ async function waitFor<T>(promise: Promise<T>, timeout: number): Promise<boolean
   return !timedOut
 }
 
-type ExitInformation = { code: number | null; signal: NodeJS.Signals | null }
+export type ExitInformation = { code: number | null; signal: NodeJS.Signals | null }
 
 export class TimeoutError extends Error {}
 export class ExitBeforeOutputMatchError extends Error {}
@@ -33,7 +33,7 @@ export class RunProcess {
   public running: boolean
   public stopReason: Error | null = null
 
-  private exitPromise: Promise<ExitInformation>
+  private stopPromise: Promise<ExitInformation>
   private errorListeners: Array<(err: Error) => void> = []
 
   constructor(command: string, args?: string[], options?: SpawnOptionsWithoutStdio) {
@@ -63,7 +63,7 @@ export class RunProcess {
       })
     })
 
-    this.exitPromise = Promise.all([exitPromise, stdoutPromise, stderrPromise]).then(result => result[0])
+    this.stopPromise = Promise.all([exitPromise, stdoutPromise, stderrPromise]).then(result => result[0])
   }
 
   async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
@@ -71,26 +71,11 @@ export class RunProcess {
     if (this.running) {
       this.cmd.kill('SIGTERM')
     }
-    if (await waitFor(this.exitPromise, sigKillTimeout)) {
-      return await this.exitPromise
+    if (await waitFor(this.stopPromise, sigKillTimeout)) {
+      return await this.stopPromise
     }
     this.cmd.kill('SIGKILL')
-    return await this.exitPromise
-  }
-
-  async waitForExit(timeout = 0): Promise<ExitInformation> {
-    return new Promise(resolve => {
-      let timeoutHandle: NodeJS.Timeout | null = null
-      if (timeout) {
-        timeoutHandle = setTimeout((_, reject) => reject(new TimeoutError()), timeout)
-      }
-      this.cmd.on('exit', (code, signal) => {
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle)
-        }
-        resolve({ code, signal })
-      })
-    })
+    return await this.stopPromise
   }
 
   stopOnOutput(
@@ -102,51 +87,50 @@ export class RunProcess {
     // TODO: Kill process and set error
     this.waitForOutput(regex, timeout, outputs)
       .then(() => {
-        return this.stop(1000, new StopBecauseOfOutputError(errorMessage))
+        return this.stop(timeout, new StopBecauseOfOutputError(errorMessage))
       })
       .catch(() => {
-        // Ignore other errors as we only need to kill the process if
+        // Ignore other errors as we only need to kill the process if we see the output
       })
   }
 
-  async waitForOutput(
+  async waitForExit(timeout = 0): Promise<ExitInformation> {
+    if (timeout) {
+      if (await waitFor(this.stopPromise, timeout)) {
+        return await this.stopPromise
+      }
+      throw new TimeoutError()
+    }
+    return await this.stopPromise
+  }
+
+  waitForOutput(
     regex: RegExp,
     timeout = 0,
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
-  ): Promise<void> {
+  ): Promise<RegExpMatchArray> {
     return new Promise((resolve, reject) => {
       // Throw if the process exist before finding the output
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.exitPromise.then(() => {
-        reject(new ExitBeforeOutputMatchError())
+      this.stopPromise.then(() => {
+        reject(this.stopReason ? this.stopReason : new ExitBeforeOutputMatchError())
       })
 
       let timeoutHandle: NodeJS.Timeout | null = null
       if (timeout) {
-        timeoutHandle = setTimeout((_, reject) => reject(new TimeoutError()), timeout)
+        timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
       }
 
-      if (outputs.includes('stdout')) {
+      for (const output of outputs) {
         let data = ''
-        this.stdout?.on('data', chunk => {
+        this[output]?.on('data', (chunk: Buffer) => {
           data += chunk.toString('utf8')
-          if (data.match(regex)) {
+          const match = data.match(regex)
+          if (match) {
             if (timeoutHandle) {
               clearTimeout(timeoutHandle)
             }
-            resolve()
-          }
-        })
-      }
-      if (outputs.includes('stderr')) {
-        let data = ''
-        this.stderr?.on('data', chunk => {
-          data += chunk.toString('utf8')
-          if (data.match(regex)) {
-            if (timeoutHandle) {
-              clearTimeout(timeoutHandle)
-            }
-            resolve()
+            resolve(match)
           }
         })
       }
@@ -162,7 +146,7 @@ export class RunProcess {
     switch (event) {
       case 'exit': {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.exitPromise.then(res => {
+        this.stopPromise.then(res => {
           listener(res.code, res.signal)
         })
         break
