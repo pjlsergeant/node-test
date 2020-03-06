@@ -21,6 +21,8 @@ describe('MySQLServer', () => {
   it('Should start the database server', async () => {
     const mySqlServer = new MySQLServer()
     await mySqlServer.start()
+    // TODO: Add support for getting a cloned database, https://dev.mysql.com/doc/refman/5.7/en/create-table-like.html
+    // fx. mySqlServer.getConnectionUrl('mysql') -> 'mysql://.../mysql-test-copy'
 
     const connectionUrl = `mysql://root:@127.0.0.1:${mySqlServer.listenPort}/mysql?charset=utf8mb4&multipleStatements=true`
     const connection = mysql.createConnection(connectionUrl)
