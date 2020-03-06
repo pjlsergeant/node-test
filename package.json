@@ -6,16 +6,17 @@
   "types": "build/dist/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
-    "build": "npm run build:types && npm run build:js:src",
-    "build:js": "npm run build:js:src",
+    "build": "npm run build:types && npm run build:js",
+    "build:js": "npm run build:js:src && npm run build:js:bin",
+    "build:js:bin": "babel bin --out-dir ./build/dist/bin --extensions '.ts' --source-maps --ignore '**/*.d.ts','bin/**/*.test.ts'",
     "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
     "build:types": "tsc --emitDeclarationOnly",
-    "lint": "eslint './src/**/*.{ts,tsx}'",
-    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
+    "lint": "eslint './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
     "prepare": "npm run build",
     "ci-jest": "TZ=UTC jest --silent --no-color --json 2> /dev/null; res=$?; echo; exit $res",
     "ci-audit": "npm audit --json || true",
-    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true",
+    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}' || true",
     "cov": "TZ=UTC jest --coverage=true"
   },
   "repository": {
