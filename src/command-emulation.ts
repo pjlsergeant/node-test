@@ -19,9 +19,11 @@ export class CommandEmulation {
   private newPath!: string
   private commands: string[] = []
   private initPromise: Promise<void>
+  private options: CommandEmulationOptions
 
   constructor(options?: CommandEmulationOptions) {
-    this.initPromise = this.init(options)
+    this.options = { overridePath: true, ...options }
+    this.initPromise = this.init()
     this.initPromise.catch(() => {
       // Do nothing as we will throw at later calls
     })
@@ -33,18 +35,22 @@ export class CommandEmulation {
     return instance
   }
 
-  private async init(options: CommandEmulationOptions = { overridePath: true }): Promise<void> {
+  private async init(): Promise<void> {
     this.tmpdir = await createTempDirectory()
     this.oldPath = process.env.PATH || ''
     this.newPath = this.tmpdir + path.delimiter + this.oldPath
 
-    if (options.overridePath) {
+    if (this.options.overridePath) {
       process.env.PATH = this.newPath
     }
   }
 
-  async setup(options: CommandEmulationOptions): Promise<void> {
-    this.initPromise = this.init(options)
+  async registerPath(externalPath: string): Promise<void> {
+    await this.initPromise // Make sure init has finished
+    this.newPath = path.resolve(externalPath) + path.delimiter + this.newPath
+    if (this.options.overridePath) {
+      process.env.PATH = this.newPath
+    }
   }
 
   async registerCommand<T = Json>(
@@ -52,7 +58,7 @@ export class CommandEmulation {
     script: string | ((data: T) => void),
     interpreter: string | null = '/bin/sh',
     data: Json = {}
-  ): Promise<void> {
+  ): Promise<string> {
     await this.initPromise // Make sure init has finished
 
     const path = `${this.tmpdir}/${cmd}`
@@ -77,6 +83,7 @@ export class CommandEmulation {
     const fullScript = `#!${interpreter}\n\n${script}\n`
     await writeFileAsync(path, fullScript)
     await chmodAsync(path, '755')
+    return fullScript
   }
 
   async cleanup(): Promise<void> {
