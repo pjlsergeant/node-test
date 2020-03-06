@@ -1,11 +1,11 @@
-import { ChildProcess, execSync, spawn, spawnSync } from 'child_process'
-import constants from 'constants'
+import { ChildProcess, spawn, spawnSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
 import { createTempDirectory } from '../common'
 import { findFreePort } from '../net'
+import { isDockerOverlay2, touchFiles } from '../unix'
 import { isPidFileRunning } from './common'
 
 interface MySQLServerOptions {
@@ -97,9 +97,9 @@ export class MySQLServer {
       const initializeStartTime = process.hrtime()
       await this.initialize()
       this.initializeTime = hrDiff(initializeStartTime, process.hrtime())
-    } else if (this.isDockerOverlay2()) {
+    } else if (await isDockerOverlay2()) {
       this.serverLog += `Working around issue with docker overlay2\n`
-      this.touchFiles(this.mysqlBaseDir as string)
+      await touchFiles(this.mysqlBaseDir as string)
     }
 
     if (this.listenPort === 0) {
@@ -119,7 +119,7 @@ export class MySQLServer {
         EVENT_NOKQUEUE: '1'
       }
     })
-    this.mysqldCmd.stdin.end()
+    this.mysqldCmd.stdin?.end()
 
     // Make sure we always kill mySQL so it does not linger
     const killMySQLd = (): void => {
@@ -133,17 +133,17 @@ export class MySQLServer {
     process.on('exit', killMySQLd)
 
     // Capture all output
-    this.mysqldCmd.stdout.on('data', data => {
+    this.mysqldCmd.stdout?.on('data', data => {
       this.serverLog += data.toString('utf8')
     })
 
     const stdOutPromise = new Promise(resolve => {
-      this.mysqldCmd.stdout.on('end', () => {
+      this.mysqldCmd.stdout?.on('end', () => {
         resolve()
       })
     })
     const stdErrPromise = new Promise(resolve => {
-      this.mysqldCmd.stderr.on('end', () => {
+      this.mysqldCmd.stderr?.on('end', () => {
         resolve()
       })
     })
@@ -155,7 +155,7 @@ export class MySQLServer {
 
     return new Promise((resolve, reject) => {
       // TODO: Replace this with a loop that tries to make a connection and a query
-      this.mysqldCmd.stderr.on('data', data => {
+      this.mysqldCmd.stderr?.on('data', data => {
         this.serverLog += data.toString('utf8')
         if (!this.started && this.serverLog.match(/ready for connections/)) {
           this.started = true
@@ -297,58 +297,5 @@ export class MySQLServer {
       const myCnf = fs.readFileSync(`${this.mysqlBaseDir}/my.cnf`).toString()
       throw new Error(`Failed to initialize: ${this.initializeLog}\n${myCnf}`)
     }
-  }
-
-  public getVariables(): { [key: string]: string } {
-    // Test configuration and get all options set
-    const mysqlHelp = spawnSync(this.mysqldPath, [`--defaults-file=${this.mysqlBaseDir}/my.cnf`, '--help', '--verbose'])
-    if (mysqlHelp.status !== 0) {
-      throw new Error(
-        `Failed to dump configuration(${this.mysqldPath} --help --verbose): \n${mysqlHelp.output.toString()}`
-      )
-    }
-    const variables: { [key: string]: string } = {}
-    const variablesSection = mysqlHelp.output.toString().match(/Variables.+?Value.+?-{50,}\s+-{10}.+?\n(.+?)\n\n/s)
-    if (variablesSection != null) {
-      for (const variableLine of variablesSection[1].split('\n')) {
-        const variableMatch = variableLine.match(/^([^\s]+)\s+(.+?)$/)
-        if (variableMatch) {
-          variables[variableMatch[1]] = variableMatch[2]
-        }
-      }
-    }
-    return variables
-  }
-
-  private touchFiles(rootPath: string): void {
-    const dirs: string[] = [rootPath]
-    while (dirs.length > 0) {
-      const dir = dirs.shift() as string
-      for (const file of fs.readdirSync(dir)) {
-        const fullPath = path.resolve(dir, file)
-        const stat = fs.statSync(fullPath)
-        if (stat.isDirectory()) {
-          dirs.push(fullPath)
-        } else if (stat.isFile()) {
-          fs.closeSync(fs.openSync(fullPath, constants.O_RDWR))
-        }
-      }
-    }
-  }
-
-  private isDockerOverlay2(): boolean {
-    if (!fs.existsSync(`/proc/1/cgroup`)) {
-      return false
-    }
-    const cGroups = fs.readFileSync(`/proc/1/cgroup`).toString()
-    if (cGroups.match(/^\d+:[^:]+:\/docker/)) {
-      const mounts = execSync(`mount`)
-        .toString()
-        .split('\n')
-      if (mounts.some(mount => mount.match(/overlay.*overlay2/) !== null)) {
-        return true
-      }
-    }
-    return false
   }
 }
