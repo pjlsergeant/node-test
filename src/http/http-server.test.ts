@@ -1,16 +1,21 @@
 import axios from 'axios'
 
+import { readBody } from './http-common'
 import { HttpServer, HttpServerOptions } from './http-server'
 
 export type TestHttpServerOptions = HttpServerOptions
 
 class TestHttpServer extends HttpServer {
   constructor(options: TestHttpServerOptions = {}) {
-    super(options, (req, res) => {
+    super(options, async (req, res) => {
       // Map the responses
       switch (req.url) {
         case '/': {
           return res.end('Hello world')
+        }
+        case '/json': {
+          const body = await readBody(req)
+          return res.end(body)
         }
         default: {
           res.statusCode = 404
@@ -60,5 +65,23 @@ describe('HttpServer', () => {
     ])
     // We have this to test that http requests are stable
     expect(httpServer.getTextRequests()).toMatchSnapshot()
+  })
+
+  it('should GET /json and return json requests', async () => {
+    const response = await axios.post<string>(`${httpServer.listenUrl}/json`, { test: 'data' })
+    expect(response.data).toMatchObject({ test: 'data' })
+    expect(httpServer.getJsonRequests()).toMatchObject([
+      {
+        body: { test: 'data' },
+        method: 'POST',
+        url: '/json'
+      }
+    ])
+    // We have this to test that http requests are stable
+    expect(httpServer.getJsonRequests()).toMatchSnapshot()
+
+    // Validate types
+    expect(httpServer.getJsonRequests()[0].body).toMatchObject({ test: 'data' })
+    expect(httpServer.getJsonRequests<{ test: string }>()[0].body?.test).toEqual('data')
   })
 })

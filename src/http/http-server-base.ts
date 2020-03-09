@@ -2,6 +2,7 @@ import http from 'http'
 import https from 'http'
 import net from 'net'
 
+import { Json } from '../common'
 import {
   HttpIncomingMessage,
   HttpJsonRequest,
@@ -69,9 +70,9 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
     })
   }
 
-  public getJsonRequests(): HttpJsonRequest[] {
-    return this.requests.map(req => {
-      return { ...req, body: JSON.parse(req.body.toString('utf8')) }
+  public getJsonRequests<T = Json>(): HttpJsonRequest<T>[] {
+    return this.requests.map<HttpJsonRequest<T>>(req => {
+      return { ...req, body: req.body.length > 0 ? JSON.parse(req.body.toString('utf8')) : null }
     })
   }
 
