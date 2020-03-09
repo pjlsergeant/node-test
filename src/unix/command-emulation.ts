@@ -7,9 +7,10 @@ const rmdirAsync = promisify(fs.rmdir)
 const writeFileAsync = promisify(fs.writeFile)
 const chmodAsync = promisify(fs.chmod)
 
-import { createTempDirectory, Json } from './common'
+import { Json } from '../common'
+import { createTempDirectory } from './fs'
 
-interface CommandEmulationOptions {
+export interface CommandEmulationOptions {
   overridePath: boolean
 }
 

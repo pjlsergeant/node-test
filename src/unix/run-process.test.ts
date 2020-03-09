@@ -1,4 +1,4 @@
-import { CommandEmulation } from '../command-emulation'
+import { CommandEmulation } from './command-emulation'
 import { RunProcess, StopBecauseOfOutputError } from './run-process'
 
 describe('run-process', () => {

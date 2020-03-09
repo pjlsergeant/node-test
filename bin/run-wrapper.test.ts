@@ -3,8 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import util from 'util'
 
-import { CommandEmulation } from '../src/command-emulation'
-import { RunProcess } from '../src/mysql/run-process'
+import { CommandEmulation, RunProcess } from './unix'
 
 const execAsync = util.promisify(childProcess.exec)
 const fsSymlink = util.promisify(fs.symlink)

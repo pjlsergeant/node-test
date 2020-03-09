@@ -1,5 +1,5 @@
-import { createTempDirectory, Json, TypedSinonStub } from './common'
-import { HttpServer, HttpServerOptions } from './http/http-server'
-import { HttpsServer, HttpsServerOptions } from './http/https-server'
-
-export { HttpServer, HttpServerOptions, HttpsServer, HttpsServerOptions, Json, TypedSinonStub, createTempDirectory }
+export { Json, TypedSinonStub } from './common'
+export { createTempDirectory } from './unix'
+export { HttpServer, HttpServerOptions } from './http/http-server'
+export { HttpsServer, HttpsServerOptions } from './http/https-server'
+export { CommandEmulation, CommandEmulationOptions, isDockerOverlay2, touchFiles } from './unix'

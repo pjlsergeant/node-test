@@ -3,10 +3,8 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import { createTempDirectory } from '../common'
 import { findFreePort } from '../net'
-import { isDockerOverlay2, touchFiles } from '../unix'
-import { isPidFileRunning } from './common'
+import { createTempDirectory, isDockerOverlay2, isPidFileRunning, touchFiles } from '../unix'
 
 interface MySQLServerOptions {
   mysqlBaseDir?: string
@@ -84,7 +82,7 @@ export class MySQLServer {
     await this.initPromise // Make sure init has finished
 
     // Check if mysql is already running
-    while (isPidFileRunning(this.mysqlPidFile)) {
+    while (await isPidFileRunning(this.mysqlPidFile)) {
       const errorMessage = `mysqld already running from this basedir: ${this.mysqlBaseDir}`
       if (!this.waitForAccess) {
         throw new Error(errorMessage)

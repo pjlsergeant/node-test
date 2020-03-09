@@ -1,4 +1,4 @@
-import { CommandEmulation } from '../command-emulation'
+import { CommandEmulation } from '../unix'
 import { generateMySQLServerConfig, getMySQLServerConfig, getMySQLServerVersionString } from './common'
 import { mysqlHelpVerbose } from './resources/mysqld-help-verbose.text'
 

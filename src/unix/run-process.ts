@@ -84,7 +84,6 @@ export class RunProcess {
     timeout = 0,
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
   ): void {
-    // TODO: Kill process and set error
     this.waitForOutput(regex, timeout, outputs)
       .then(() => {
         return this.stop(timeout, new StopBecauseOfOutputError(errorMessage))

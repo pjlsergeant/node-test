@@ -1,7 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 
-import { RunProcess } from './run-process'
+import { RunProcess } from '../unix'
 
 export interface MySQLServerConfig {
   [key: string]: { [key: string]: string }
@@ -86,23 +86,4 @@ export function generateMySQLServerConfig(mysqlBaseDir: string, myCnfCustom: MyS
   }
 
   return myCnfLines.join(`\n`) + '\n'
-}
-
-export function isPidFileRunning(pidFile: string): boolean | void {
-  if (!fs.existsSync(pidFile)) {
-    return false
-  }
-  const pidStr = fs
-    .readFileSync(pidFile)
-    .toString()
-    .replace(/\s+$/s, '')
-  if (!pidStr.match(/^\d+$/)) {
-    return false
-  }
-  const pid = parseInt(pidStr, 10)
-  try {
-    return process.kill(pid, 0)
-  } catch (e) {
-    return e.code === 'EPERM'
-  }
 }

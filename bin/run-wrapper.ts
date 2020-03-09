@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { RunProcess } from '../src/mysql/run-process'
+import { RunProcess } from './unix'
 
 /**
  * Run a sub process make sure it's stopped when stdin closed or sigkill is sent.
