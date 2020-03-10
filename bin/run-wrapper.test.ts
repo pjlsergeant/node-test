@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import util from 'util'
 
-import { CommandEmulation, RunProcess } from './unix'
+import { CommandEmulation, RunProcess } from '../src/unix'
 
 const execAsync = util.promisify(childProcess.exec)
 const fsSymlink = util.promisify(fs.symlink)

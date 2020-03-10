@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-import { RunProcess } from './unix'
+import { RunProcess } from '../src/unix'
 
 /**
  * Run a sub process make sure it's stopped when stdin closed or sigkill is sent.
  * @param argv [timeout, command, args...]
  */
 async function main(argv: string[]): Promise<number> {
-  if (argv.length < 4) {
+  if (argv.length < 4 || !argv[2].match(/^\d+$/)) {
+    console.log(argv)
     console.error(`node wrapper.js 3000 command args`)
     return 1
   }
@@ -25,7 +26,8 @@ async function main(argv: string[]): Promise<number> {
 
   const stdinEndPromise = new Promise<string>(resolve => process.stdin.on('end', () => resolve('stdin closed')))
   const sigTermPromise = new Promise<string>(resolve => process.on('SIGTERM', () => resolve('SIGTERM')))
-  const reason = await Promise.race([stdinEndPromise, sigTermPromise])
+  const sigIntPromise = new Promise<string>(resolve => process.on('SIGINT', () => resolve('SIGINT')))
+  const reason = await Promise.race([stdinEndPromise, sigTermPromise, sigIntPromise])
   console.log(`Stopping because of ${reason}`)
 
   const exitInfo = await cmd.stop(sigkillTimeout)

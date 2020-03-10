@@ -87,3 +87,29 @@ export function generateMySQLServerConfig(mysqlBaseDir: string, myCnfCustom: MyS
 
   return myCnfLines.join(`\n`) + '\n'
 }
+
+export async function initializeMySQLData(mysqldPath: string, mysqlBaseDir: string): Promise<void> {
+  // Initialize mysql data
+  const mysqlInitArgs = [
+    `--defaults-file=${mysqlBaseDir}/my.cnf`,
+    '--default-authentication-plugin=mysql_native_password',
+    '--initialize-insecure'
+  ]
+  let initializeLog = `${mysqldPath} ${mysqlInitArgs.join(' ')}\n`
+  const cmd = new RunProcess(mysqldPath, mysqlInitArgs, {
+    env: {
+      ...process.env,
+      EVENT_NOKQUEUE: '1'
+    }
+  })
+  cmd.stdout?.on('data', chunk => {
+    initializeLog += chunk.toString('utf8')
+  })
+  cmd.stderr?.on('data', chunk => {
+    initializeLog += chunk.toString('utf8')
+  })
+  const exitInfo = await cmd.waitForExit()
+  if (exitInfo.code !== 0) {
+    throw new Error(`Failed to initialize ${mysqldPath}: ${initializeLog}`)
+  }
+}

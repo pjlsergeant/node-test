@@ -1,22 +1,6 @@
 import { ChildProcess, SendHandle, Serializable, spawn, SpawnOptionsWithoutStdio } from 'child_process'
 
-async function waitFor<T>(promise: Promise<T>, timeout: number): Promise<boolean> {
-  let timedOut = false
-  let timeoutHandle!: NodeJS.Timeout
-  const timeoutPromise = new Promise<void>(resolve => {
-    timeoutHandle = setTimeout(() => {
-      timedOut = true
-      resolve()
-    }, timeout)
-  })
-
-  try {
-    await Promise.race([timeoutPromise, promise])
-  } finally {
-    clearTimeout(timeoutHandle)
-  }
-  return !timedOut
-}
+import { waitFor } from '../promise'
 
 export type ExitInformation = { code: number | null; signal: NodeJS.Signals | null }
 
