@@ -7,7 +7,7 @@ pid-file=/tmp/test/data/mysqld.local.pid
 socket=/tmp/test/mysql.sock
 datadir=/tmp/test/data
 secure_file_priv=/tmp/test/files
-tmpdir=/var/folders/jn/_njw_24d2ksf97cd4hqr638c0000gn/T
+tmpdir=/tmp
 [mysqld-8.0]
 mysqlx=0
 "
@@ -20,7 +20,7 @@ pid-file=/tmp/test/data/mysqld.local.pid
 socket=/tmp/test/mysql.sock
 datadir=/tmp/test/data
 secure_file_priv=/tmp/test/files
-tmpdir=/var/folders/jn/_njw_24d2ksf97cd4hqr638c0000gn/T
+tmpdir=/tmp
 user=mysql
 [mysqld-8.0]
 mysqlx=0

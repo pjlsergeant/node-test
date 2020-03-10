@@ -4,12 +4,12 @@ import { mysqlHelpVerbose } from './resources/mysqld-help-verbose.text'
 
 describe('generateMySQLServerConfig', () => {
   it('should generate generic config', async () => {
-    const config = generateMySQLServerConfig('/tmp/test')
+    const config = generateMySQLServerConfig('/tmp/test', {}, '/tmp')
     expect(config).toMatchSnapshot()
   })
 
   it('should set user to mysql', async () => {
-    const config = generateMySQLServerConfig('/tmp/test', { mysqld: { user: 'mysql' } })
+    const config = generateMySQLServerConfig('/tmp/test', { mysqld: { user: 'mysql' } }, '/tmp')
     expect(config).toMatchSnapshot()
   })
 })

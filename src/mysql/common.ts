@@ -52,7 +52,11 @@ export async function getMySQLServerConfig(mysqldPath: string, mysqlBaseDir: str
   return { mysqld: variables }
 }
 
-export function generateMySQLServerConfig(mysqlBaseDir: string, myCnfCustom: MySQLServerConfig = {}): string {
+export function generateMySQLServerConfig(
+  mysqlBaseDir: string,
+  myCnfCustom: MySQLServerConfig = {},
+  tmpdir = os.tmpdir()
+): string {
   const myCnf: MySQLServerConfig = {
     // Defaults
     mysqld: {
@@ -62,7 +66,7 @@ export function generateMySQLServerConfig(mysqlBaseDir: string, myCnfCustom: MyS
       datadir: `${mysqlBaseDir}/data`,
       // eslint-disable-next-line @typescript-eslint/camelcase
       secure_file_priv: `${mysqlBaseDir}/files`,
-      tmpdir: os.tmpdir()
+      tmpdir
     },
     'mysqld-8.0': {
       mysqlx: '0'
