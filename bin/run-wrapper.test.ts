@@ -14,7 +14,7 @@ describe('run-wrapper', () => {
 
   beforeAll(async () => {
     // Make sure wrapper has been compiled
-    await execAsync('npm run build')
+    await execAsync('npm run build:js')
     await commandEmulation.registerPath('build/dist/bin')
     try {
       await fsUnlink('build/dist/bin/run-wrapper').catch(e => {
@@ -24,7 +24,7 @@ describe('run-wrapper', () => {
     } catch (e) {
       // Ignore
     }
-  })
+  }, 10000)
 
   afterAll(async () => {
     await fsUnlink('build/dist/bin/run-wrapper').catch(e => {
