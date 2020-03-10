@@ -17,8 +17,8 @@ export interface HttpRequest {
   body: Buffer
 }
 
-export type HttpJsonRequest = Omit<HttpRequest, 'body'> & {
-  body: Json
+export type HttpJsonRequest<T = Json> = Omit<HttpRequest, 'body'> & {
+  body: T | null
 }
 
 export type HttpTextRequest = Omit<HttpRequest, 'body'> & {

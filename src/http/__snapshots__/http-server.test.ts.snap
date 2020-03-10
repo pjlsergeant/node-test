@@ -17,3 +17,23 @@ Array [
   },
 ]
 `;
+
+exports[`HttpServer should GET /json and return json requests 1`] = `
+Array [
+  Object {
+    "body": Object {
+      "test": "data",
+    },
+    "headers": Object {
+      "accept": "application/json, text/plain, */*",
+      "connection": "close",
+      "content-length": "15",
+      "content-type": "application/json;charset=utf-8",
+      "host": "localhost",
+      "user-agent": "axios/0.19.2",
+    },
+    "method": "POST",
+    "url": "/json",
+  },
+]
+`;
