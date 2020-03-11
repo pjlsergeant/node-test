@@ -55,10 +55,12 @@ export class RunProcess {
     if (this.running) {
       this.cmd.kill('SIGTERM')
     }
+    if (sigKillTimeout) {
     if (await waitFor(this.stopPromise, sigKillTimeout)) {
       return await this.stopPromise
     }
     this.cmd.kill('SIGKILL')
+    }
     return await this.stopPromise
   }
 
