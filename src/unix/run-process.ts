@@ -95,19 +95,13 @@ export class RunProcess {
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
   ): Promise<RegExpMatchArray> {
     return new Promise((resolve, reject) => {
-      // Throw if the process exist before finding the output
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.stopPromise.then(() => {
-        reject(this.stopReason ? this.stopReason : new ExitBeforeOutputMatchError())
-      })
-
       let timeoutHandle: NodeJS.Timeout | null = null
       if (timeout) {
         timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
       }
 
+      let data = ''
       for (const output of outputs) {
-        let data = ''
         this[output]?.on('data', (chunk: Buffer) => {
           data += chunk.toString('utf8')
           const match = data.match(regex)
@@ -119,6 +113,11 @@ export class RunProcess {
           }
         })
       }
+      // Throw if the process exist before finding the output
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.stopPromise.then(() => {
+        reject(this.stopReason ? this.stopReason : new ExitBeforeOutputMatchError(data))
+      })
     })
   }
 
