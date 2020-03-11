@@ -92,7 +92,7 @@ export class MySQLServer {
     // TODO: Find run-wrapper
     this.mySQLServerCmd = new RunProcess(
       './build/dist/bin/run-wrapper.js',
-      ['3000', this.mysqldPath, ...mysqldStartArgs],
+      ['--', this.mysqldPath, ...mysqldStartArgs],
       {
         env: {
           ...process.env,

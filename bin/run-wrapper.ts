@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import args from 'args'
+import fs from 'fs'
+
 import { RunProcess } from '../src/unix'
 
 /**
@@ -7,30 +10,73 @@ import { RunProcess } from '../src/unix'
  * @param argv [timeout, command, args...]
  */
 async function main(argv: string[]): Promise<number> {
-  if (argv.length < 4 || !argv[2].match(/^\d+$/)) {
-    console.log(argv)
-    console.error(`node wrapper.js 3000 command args`)
+  args.options([
+    {
+      name: 'stop-on-stdin-close',
+      description: `Stop wrapped process when stdin closes`,
+      init: content => content,
+      defaultValue: false
+    },
+    {
+      name: 'sigkill-timeout',
+      description: `Milliseconds to wait before calling SIGKILL after SIGTERM failed`,
+      init: content => content,
+      defaultValue: 3000
+    },
+    {
+      name: 'stdout-file',
+      description: `File to log stdout to`,
+      init: content => content,
+      defaultValue: ''
+    },
+    {
+      name: 'stderr-file',
+      description: `File to log stderr to`,
+      init: content => content,
+      defaultValue: ''
+    }
+  ])
+  const flags = args.parse(argv)
+
+  if (args.sub.length < 1) {
+    console.error(`node wrapper.js command args`)
     return 1
   }
 
-  const sigkillTimeout = parseInt(argv.slice(2, 3)[0])
-  const command = argv.slice(3, 4)[0]
-  const args = argv.slice(4)
+  const command = args.sub[0]
+  const commandArgs = args.sub.slice(1)
 
-  const cmd = new RunProcess(command, args)
+  const cmd = new RunProcess(command, commandArgs)
   cmd.stdout?.pipe(process.stdout)
   cmd.stderr?.pipe(process.stderr)
   if (cmd.stdin) {
     process.stdin.pipe(cmd.stdin)
   }
 
-  const stdinEndPromise = new Promise<string>(resolve => process.stdin.on('end', () => resolve('stdin closed')))
-  const sigTermPromise = new Promise<string>(resolve => process.on('SIGTERM', () => resolve('SIGTERM')))
-  const sigIntPromise = new Promise<string>(resolve => process.on('SIGINT', () => resolve('SIGINT')))
-  const reason = await Promise.race([stdinEndPromise, sigTermPromise, sigIntPromise])
-  console.log(`Stopping because of ${reason}`)
+  if (flags['stdoutFile']) {
+    const stdoutFile = fs.createWriteStream(flags['stdoutFile'])
+    cmd.stdout?.pipe(stdoutFile)
+  }
+  if (flags['stderrFile']) {
+    const stderrFile = fs.createWriteStream(flags['stderrFile'])
+    cmd.stderr?.pipe(stderrFile)
+  }
 
-  const exitInfo = await cmd.stop(sigkillTimeout)
+  const exitPromises: Array<Promise<string>> = [
+    cmd.waitForExit().then(exitInfo => `process existed(code: ${exitInfo.code}, signal: ${exitInfo.code})`),
+    new Promise(resolve => process.on('SIGTERM', () => resolve('SIGTERM'))),
+    new Promise(resolve => process.on('SIGINT', () => resolve('SIGINT')))
+  ]
+  if (flags['stopOnStdinClose']) {
+    exitPromises.push(new Promise(resolve => process.stdin.on('end', () => resolve('stdin closed'))))
+  }
+
+  await cmd.waitForStarted()
+  console.log(`Started ${command}${commandArgs.length > 0 ? ' ' + commandArgs.join(' ') : ''}`)
+  const reason = await Promise.race(exitPromises)
+  console.error(`Stopping because ${reason}`)
+
+  const exitInfo = await cmd.stop(flags['sigkillTimeout'])
   return exitInfo.code || 0
 }
 
