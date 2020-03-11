@@ -121,14 +121,13 @@ export class MySQLServer {
     }
   }
 
-  async stop(sigKillTimeout = 3000): Promise<void> {
+  async stop(): Promise<void> {
     await this.initPromise // Make sure init has finished
     if (this.mySQLServerCmd) {
-      this.mySQLServerCmd.stdin?.end()
-      await this.mySQLServerCmd.waitForExit()
+      await this.mySQLServerCmd.stop(0)
     } else if (this.mysqldPid) {
       process.kill(this.mysqldPid, 'SIGTERM')
-      const deadline = Date.now() + sigKillTimeout
+      const deadline = Date.now()
       while (deadline > Date.now()) {
         await new Promise(resolve => setTimeout(resolve, 100))
         if (!(await isPidRunning(this.mysqldPid))) {
