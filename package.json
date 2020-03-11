@@ -6,10 +6,8 @@
   "types": "build/dist/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
-    "build": "npm run build:types && npm run build:js",
-    "build:js": "npm run build:js:src && npm run build:js:bin",
-    "build:js:bin": "babel bin --out-dir ./build/dist/bin --extensions '.ts' --source-maps --ignore '**/*.d.ts','bin/**/*.test.ts'",
-    "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
+    "build": "./node_modules/@connectedcars/setup/build/dist/bin/build.js -- src bin",
+    "build:js": "./node_modules/@connectedcars/setup/build/dist/bin/build.js --skip-typings -- src bin",
     "build:types": "tsc --emitDeclarationOnly",
     "lint": "eslint './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
     "lint:fix": "eslint --fix './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
@@ -31,21 +29,21 @@
   "homepage": "https://github.com/connectedcars/node-test#readme",
   "devDependencies": {
     "@babel/cli": "7.8.4",
-    "@babel/core": "7.8.4",
+    "@babel/core": "7.8.7",
     "@babel/plugin-proposal-class-properties": "7.8.3",
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.8.3",
     "@babel/plugin-proposal-numeric-separator": "7.8.3",
     "@babel/plugin-proposal-optional-chaining": "7.8.3",
-    "@babel/preset-env": "7.8.4",
+    "@babel/preset-env": "7.8.7",
     "@babel/preset-typescript": "7.8.3",
-    "@connectedcars/setup": "^0.6.0",
+    "@connectedcars/setup": "^0.7.0",
     "@types/args": "^3.0.0",
-    "@types/jest": "25.1.2",
+    "@types/jest": "25.1.4",
     "@types/mysql": "^2.15.9",
-    "@types/node": "^13.7.0",
-    "@types/sinon": "^7.5.1",
-    "@typescript-eslint/eslint-plugin": "2.19.2",
-    "@typescript-eslint/parser": "2.19.2",
+    "@types/node": "^13.9.0",
+    "@types/sinon": "^7.5.2",
+    "@typescript-eslint/eslint-plugin": "2.23.0",
+    "@typescript-eslint/parser": "2.23.0",
     "axios": "^0.19.2",
     "babel-jest": "25.1.0",
     "eslint": "6.8.0",
@@ -55,11 +53,11 @@
     "jest": "25.1.0",
     "mysql": "^2.18.1",
     "prettier": "1.19.1",
-    "typescript": "3.7.5"
+    "typescript": "3.8.3"
   },
   "dependencies": {
     "args": "^5.0.1",
-    "sinon": "^8.1.1"
+    "sinon": "^9.0.1"
   },
   "engines": {
     "node": ">=12.10.0"

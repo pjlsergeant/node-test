@@ -29,7 +29,7 @@ export class MySQLServer {
   private initPromise: Promise<void>
   private options: MySQLServerOptions
 
-  constructor(options: MySQLServerOptions = {}) {
+  public constructor(options: MySQLServerOptions = {}) {
     this.options = options
     this.mysqldPath = options.mysqldPath || 'mysqld'
     this.myCnfCustom = options.myCnf || {}
@@ -37,6 +37,36 @@ export class MySQLServer {
     this.initPromise.catch(() => {
       // Do nothing as we will throw at later calls
     })
+  }
+
+  public async stop(): Promise<void> {
+    await this.initPromise // Make sure init has finished
+    if (this.mySQLServerCmd) {
+      await this.mySQLServerCmd.stop(0)
+    } else if (this.mysqldPid) {
+      process.kill(this.mysqldPid, 'SIGTERM')
+      const deadline = Date.now()
+      while (deadline > Date.now()) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        if (!(await isPidRunning(this.mysqldPid))) {
+          return
+        }
+      }
+      process.kill(this.mysqldPid, 'SIGKIll')
+      while (await isPidRunning(this.mysqldPid)) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+  }
+
+  public async getListenPort(): Promise<number> {
+    await this.initPromise // Make sure init has finished
+    return this.listenPort
+  }
+
+  public async getMysqlBaseDir(): Promise<string> {
+    await this.initPromise // Make sure init has finished
+    return this.mysqlBaseDir
   }
 
   private async init(): Promise<void> {
@@ -119,35 +149,5 @@ export class MySQLServer {
     } catch (e) {
       throw new Error(`Failed to start mysqld(${e}): ${serverLog}`)
     }
-  }
-
-  async stop(): Promise<void> {
-    await this.initPromise // Make sure init has finished
-    if (this.mySQLServerCmd) {
-      await this.mySQLServerCmd.stop(0)
-    } else if (this.mysqldPid) {
-      process.kill(this.mysqldPid, 'SIGTERM')
-      const deadline = Date.now()
-      while (deadline > Date.now()) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        if (!(await isPidRunning(this.mysqldPid))) {
-          return
-        }
-      }
-      process.kill(this.mysqldPid, 'SIGKIll')
-      while (await isPidRunning(this.mysqldPid)) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-    }
-  }
-
-  async getListenPort(): Promise<number> {
-    await this.initPromise // Make sure init has finished
-    return this.listenPort
-  }
-
-  async getMysqlBaseDir(): Promise<string> {
-    await this.initPromise // Make sure init has finished
-    return this.mysqlBaseDir
   }
 }

@@ -15,29 +15,17 @@ import {
 export class HttpServerBase<T extends http.Server | https.Server> {
   public listenPort = 0
   public listenUrl = ''
-  private baseUrl: string
   protected httpServer: T
   protected requests: HttpRequest[] = []
 
-  constructor(baseUrl: string, httpServer: T) {
+  private baseUrl: string
+
+  public constructor(baseUrl: string, httpServer: T) {
     this.httpServer = httpServer
     this.baseUrl = baseUrl
   }
 
-  protected handleRequest(
-    req: HttpIncomingMessage,
-    res: http.ServerResponse,
-    requestListener: HttpRequestListener
-  ): void {
-    try {
-      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
-        this.handleError(res, e)
-      })
-    } catch (e) {
-      this.handleError(res, e)
-    }
-  }
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public on(event: string, listener: (...args: any[]) => void): this {
     this.httpServer.on(event, listener)
     return this
@@ -84,6 +72,20 @@ export class HttpServerBase<T extends http.Server | https.Server> {
 
   public clearRequests(): void {
     this.requests = []
+  }
+
+  protected handleRequest(
+    req: HttpIncomingMessage,
+    res: http.ServerResponse,
+    requestListener: HttpRequestListener
+  ): void {
+    try {
+      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
+        this.handleError(res, e)
+      })
+    } catch (e) {
+      this.handleError(res, e)
+    }
   }
 
   protected async saveRequest(req: HttpIncomingMessage): Promise<void> {

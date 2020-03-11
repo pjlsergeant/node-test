@@ -55,9 +55,9 @@ describe('ChildProcess', () => {
 
   it('should run faked node command', async () => {
     await commandEmulation.registerCommand('fake-node-command', () => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
       const os = require('os')
-      console.log('Hello ' + os.arch())
+      console.log(`Hello  ${os.arch()}`)
     })
 
     const result = await shell('fake-node-command')
@@ -74,7 +74,7 @@ describe('ChildProcess', () => {
       'fake-node-command',
       data => {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        console.log('Hello ' + data)
+        console.log(`Hello ${data}`)
       },
       null,
       outsideData

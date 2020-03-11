@@ -21,7 +21,7 @@ export class RunProcess {
   private stopPromise: Promise<ExitInformation>
   private errorListeners: Array<(err: Error) => void> = []
 
-  constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
+  public constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
     this.cmd = spawn(command, args || [], options)
@@ -70,7 +70,7 @@ export class RunProcess {
     })
   }
 
-  async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
+  public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
     this.stopReason = error || null
     if (this.running) {
       this.cmd.kill('SIGTERM')
@@ -84,7 +84,7 @@ export class RunProcess {
     return await this.stopPromise
   }
 
-  stopOnOutput(
+  public stopOnOutput(
     regex: RegExp,
     errorMessage?: string,
     timeout = 0,
@@ -99,11 +99,11 @@ export class RunProcess {
       })
   }
 
-  async waitForStarted(): Promise<void> {
+  public async waitForStarted(): Promise<void> {
     return await this.startPromise
   }
 
-  async waitForExit(timeout = 0): Promise<ExitInformation> {
+  public async waitForExit(timeout = 0): Promise<ExitInformation> {
     if (timeout) {
       if (await waitFor(this.stopPromise, timeout)) {
         return await this.stopPromise
@@ -113,7 +113,7 @@ export class RunProcess {
     return await this.stopPromise
   }
 
-  waitForOutput(
+  public waitForOutput(
     regex: RegExp,
     timeout = 0,
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
@@ -145,12 +145,13 @@ export class RunProcess {
     })
   }
 
-  on(event: 'close', listener: (code: number, signal: NodeJS.Signals) => void): this
-  on(event: 'disconnect', listener: () => void): this
-  on(event: 'error', listener: (err: Error) => void): this
-  on(event: 'exit', listener: (code: number | null, signal: NodeJS.Signals | null) => void): this
-  on(event: 'message', listener: (message: Serializable, sendHandle: SendHandle) => void): this
-  on(event: string, listener: (...args: any[]) => void): this {
+  public on(event: 'close', listener: (code: number, signal: NodeJS.Signals) => void): this
+  public on(event: 'disconnect', listener: () => void): this
+  public on(event: 'error', listener: (err: Error) => void): this
+  public on(event: 'exit', listener: (code: number | null, signal: NodeJS.Signals | null) => void): this
+  public on(event: 'message', listener: (message: Serializable, sendHandle: SendHandle) => void): this
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public on(event: string, listener: (...args: any[]) => void): this {
     switch (event) {
       case 'exit': {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -171,7 +172,7 @@ export class RunProcess {
     return this
   }
 
-  kill(signal?: NodeJS.Signals): void {
+  public kill(signal?: NodeJS.Signals): void {
     this.cmd.kill(signal)
   }
 }

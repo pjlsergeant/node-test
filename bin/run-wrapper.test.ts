@@ -18,7 +18,7 @@ describe('run-wrapper', () => {
     await execAsync('npm run build:js')
     await commandEmulation.registerPath('build/dist/bin')
     try {
-      await fsUnlink('build/dist/bin/run-wrapper').catch(e => {
+      await fsUnlink('build/dist/bin/run-wrapper').catch(() => {
         // TODO: validate that it's no entry we get
       })
       await fsSymlink(path.resolve('build/dist/bin/run-wrapper.js'), 'build/dist/bin/run-wrapper')
@@ -28,7 +28,7 @@ describe('run-wrapper', () => {
   }, 10000)
 
   afterAll(async () => {
-    await fsUnlink('build/dist/bin/run-wrapper').catch(e => {
+    await fsUnlink('build/dist/bin/run-wrapper').catch(() => {
       // TODO: validate that it's no entry we get
     })
   })

@@ -22,7 +22,7 @@ export class CommandEmulation {
   private initPromise: Promise<void>
   private options: CommandEmulationOptions
 
-  constructor(options?: CommandEmulationOptions) {
+  public constructor(options?: CommandEmulationOptions) {
     this.options = { overridePath: true, ...options }
     this.initPromise = this.init()
     this.initPromise.catch(() => {
@@ -30,23 +30,13 @@ export class CommandEmulation {
     })
   }
 
-  static async new(options?: CommandEmulationOptions): Promise<CommandEmulation> {
+  public static async new(options?: CommandEmulationOptions): Promise<CommandEmulation> {
     const instance = new CommandEmulation(options)
     await instance.initPromise
     return instance
   }
 
-  private async init(): Promise<void> {
-    this.tmpdir = await createTempDirectory()
-    this.oldPath = process.env.PATH || ''
-    this.newPath = this.tmpdir + path.delimiter + this.oldPath
-
-    if (this.options.overridePath) {
-      process.env.PATH = this.newPath
-    }
-  }
-
-  async registerPath(externalPath: string): Promise<void> {
+  public async registerPath(externalPath: string): Promise<void> {
     await this.initPromise // Make sure init has finished
     this.newPath = path.resolve(externalPath) + path.delimiter + this.newPath
     if (this.options.overridePath) {
@@ -54,7 +44,7 @@ export class CommandEmulation {
     }
   }
 
-  async registerCommand<T = Json>(
+  public async registerCommand<T = Json>(
     cmd: string,
     script: string | ((data: T) => void),
     interpreter: string | null = '/bin/sh',
@@ -87,7 +77,7 @@ export class CommandEmulation {
     return fullScript
   }
 
-  async cleanup(): Promise<void> {
+  public async cleanup(): Promise<void> {
     await this.initPromise // Make sure init has finished
     process.env.PATH = this.oldPath
     for (const command of this.commands) {
@@ -99,13 +89,23 @@ export class CommandEmulation {
     })
   }
 
-  async getTmpdir(): Promise<string> {
+  public async getTmpdir(): Promise<string> {
     await this.initPromise // Make sure init has finished
     return this.tmpdir
   }
 
-  async getPath(): Promise<string> {
+  public async getPath(): Promise<string> {
     await this.initPromise // Make sure init has finished
     return this.newPath
+  }
+
+  private async init(): Promise<void> {
+    this.tmpdir = await createTempDirectory()
+    this.oldPath = process.env.PATH || ''
+    this.newPath = this.tmpdir + path.delimiter + this.oldPath
+
+    if (this.options.overridePath) {
+      process.env.PATH = this.newPath
+    }
   }
 }

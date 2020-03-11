@@ -16,7 +16,7 @@ export class HttpsServer extends HttpServerBase<https.Server> {
   public cert: HttpsServerOptions['cert']
   public key: HttpsServerOptions['key']
 
-  constructor(options: HttpsServerOptions, requestListener: HttpRequestListener) {
+  public constructor(options: HttpsServerOptions, requestListener: HttpRequestListener) {
     options = {
       cert: localhostCertificate,
       key: localhostKey,
@@ -35,10 +35,6 @@ export class HttpsServer extends HttpServerBase<https.Server> {
     this.key = options.key
   }
 
-  public getCaAgent(): https.Agent {
-    return new https.Agent({ ca: this.cert })
-  }
-
   public static getDefaultCertAgent(): https.Agent {
     return new https.Agent(HttpsServer.getDefaultClientCerts())
   }
@@ -49,5 +45,9 @@ export class HttpsServer extends HttpServerBase<https.Server> {
       key: clientKey,
       cert: clientCertificate
     }
+  }
+
+  public getCaAgent(): https.Agent {
+    return new https.Agent({ ca: this.cert })
   }
 }
