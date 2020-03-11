@@ -1,4 +1,4 @@
-import { ChildProcess, SendHandle, Serializable, spawn, SpawnOptionsWithoutStdio } from 'child_process'
+import { ChildProcess, SendHandle, Serializable, spawn } from 'child_process'
 
 import { waitFor } from '../promise'
 
@@ -17,6 +17,7 @@ export class RunProcess {
   public running: boolean
   public stopReason: Error | null = null
 
+  private startPromise: Promise<void>
   private stopPromise: Promise<ExitInformation>
   private errorListeners: Array<(err: Error) => void> = []
 
@@ -28,10 +29,21 @@ export class RunProcess {
     if (this.cmd.pid) {
       // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
       this.pid = this.cmd.pid
-    this.stdin = this.cmd.stdin
-    this.stdout = this.cmd.stdout
-    this.stderr = this.cmd.stderr
+      this.stdin = this.cmd.stdin
+      this.stdout = this.cmd.stdout
+      this.stderr = this.cmd.stderr
     }
+
+    // Capture the error the fork/exec failed, fx. if the file does not exists or access errors
+    this.startPromise = new Promise<void>((resolve, reject) => {
+      if (this.pid) {
+        resolve()
+      } else {
+        this.cmd.on('error', e => {
+          reject(e)
+        })
+      }
+    })
 
     const exitPromise = new Promise<ExitInformation>(resolve => {
       this.cmd.on('exit', (code, signal) => {
@@ -50,7 +62,12 @@ export class RunProcess {
       })
     })
 
-    this.stopPromise = Promise.all([exitPromise, stdoutPromise, stderrPromise]).then(result => result[0])
+    this.stopPromise = Promise.all([this.startPromise, exitPromise, stdoutPromise, stderrPromise]).then(
+      result => result[1]
+    )
+    this.stopPromise.catch(() => {
+      // User might never bind to this promise if they are just starting a process not caring about if it runs on not
+    })
   }
 
   async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
@@ -59,10 +76,10 @@ export class RunProcess {
       this.cmd.kill('SIGTERM')
     }
     if (sigKillTimeout) {
-    if (await waitFor(this.stopPromise, sigKillTimeout)) {
-      return await this.stopPromise
-    }
-    this.cmd.kill('SIGKILL')
+      if (await waitFor(this.stopPromise, sigKillTimeout)) {
+        return await this.stopPromise
+      }
+      this.cmd.kill('SIGKILL')
     }
     return await this.stopPromise
   }
@@ -80,6 +97,10 @@ export class RunProcess {
       .catch(() => {
         // Ignore other errors as we only need to kill the process if we see the output
       })
+  }
+
+  async waitForStarted(): Promise<void> {
+    return await this.startPromise
   }
 
   async waitForExit(timeout = 0): Promise<ExitInformation> {

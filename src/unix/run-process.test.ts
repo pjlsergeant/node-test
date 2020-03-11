@@ -49,9 +49,6 @@ describe('run-process', () => {
     })
 
     const cmd = new RunProcess('my-hello')
-    //cmd.stdout?.on('data', chunk => {
-    //  process.stdout.write(chunk)
-    //})
 
     // Wait for application to start
     await cmd.waitForOutput(/Started.../)
