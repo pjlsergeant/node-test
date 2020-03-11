@@ -10,25 +10,28 @@ export class StopBecauseOfOutputError extends Error {}
 
 export class RunProcess {
   public cmd: ChildProcess
-  public readonly pid: number
-  public stdin: ChildProcess['stdin']
-  public stdout: ChildProcess['stdout']
-  public stderr: ChildProcess['stderr']
+  public readonly pid: number = 0
+  public stdin: ChildProcess['stdin'] = null
+  public stdout: ChildProcess['stdout'] = null
+  public stderr: ChildProcess['stderr'] = null
   public running: boolean
   public stopReason: Error | null = null
 
   private stopPromise: Promise<ExitInformation>
   private errorListeners: Array<(err: Error) => void> = []
 
-  constructor(command: string, args?: string[], options?: SpawnOptionsWithoutStdio) {
+  constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
     this.cmd = spawn(command, args || [], options)
     this.running = true
+    if (this.cmd.pid) {
+      // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
+      this.pid = this.cmd.pid
     this.stdin = this.cmd.stdin
     this.stdout = this.cmd.stdout
     this.stderr = this.cmd.stderr
-    this.pid = this.cmd.pid
+    }
 
     const exitPromise = new Promise<ExitInformation>(resolve => {
       this.cmd.on('exit', (code, signal) => {
