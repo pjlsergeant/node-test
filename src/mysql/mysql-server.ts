@@ -70,6 +70,8 @@ export class MySQLServer {
   }
 
   private async init(): Promise<void> {
+    // TODO: Set logging to files
+    // TODO: Get pid of wrapper instead of mysql it self
     if (this.options.mysqlBaseDir) {
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
 
@@ -127,8 +129,7 @@ export class MySQLServer {
         env: {
           ...process.env,
           EVENT_NOKQUEUE: '1'
-        },
-        detached: true
+        }
       }
     )
     let serverLog = ''
