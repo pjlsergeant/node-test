@@ -16,6 +16,7 @@ export class RunProcess {
   public stderr: ChildProcess['stderr'] = null
   public running: boolean
   public stopReason: Error | null = null
+  public detached: boolean
 
   private startPromise: Promise<void>
   private stopPromise: Promise<ExitInformation>
@@ -25,7 +26,7 @@ export class RunProcess {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
     this.cmd = spawn(command, args || [], options)
-    this.running = true
+    this.detached = options.detached ? options.detached : false
     if (this.cmd.pid) {
       // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
       this.pid = this.cmd.pid
@@ -35,32 +36,34 @@ export class RunProcess {
     }
 
     // Capture the error the fork/exec failed, fx. if the file does not exists or access errors
-    this.startPromise = new Promise<void>((resolve, reject) => {
-      if (this.pid) {
-        resolve()
-      } else {
-        this.cmd.on('error', e => {
-          reject(e)
-        })
-      }
-    })
+    if (this.pid) {
+      this.running = true
+      this.startPromise = Promise.resolve()
+    } else {
+      this.running = false
+      this.startPromise = new Promise<void>((_, reject) => this.cmd.on('error', reject))
+    }
 
-    const exitPromise = new Promise<ExitInformation>(resolve => {
-      this.cmd.on('exit', (code, signal) => {
-        this.running = false
-        resolve({ code, signal })
+    let exitPromise: Promise<ExitInformation>
+    if (this.detached) {
+      this.cmd.unref()
+      this.running = false
+      exitPromise = Promise.resolve({ code: 0, signal: null })
+    } else {
+      exitPromise = new Promise(resolve => {
+        this.cmd.on('exit', (code, signal) => {
+          this.running = false
+          resolve({ code, signal })
+        })
       })
-    })
-    const stdoutPromise = new Promise<void>(resolve => {
-      this.cmd.stdout?.on('end', () => {
-        resolve()
-      })
-    })
-    const stderrPromise = new Promise<void>(resolve => {
-      this.cmd.stderr?.on('end', () => {
-        resolve()
-      })
-    })
+    }
+
+    const stdoutPromise: Promise<void> = this.cmd.stdout
+      ? new Promise<void>(resolve => this.cmd.stdout?.on('end', resolve))
+      : Promise.resolve()
+    const stderrPromise: Promise<void> = this.cmd.stderr
+      ? new Promise<void>(resolve => this.cmd.stderr?.on('end', resolve))
+      : Promise.resolve()
 
     this.stopPromise = Promise.all([this.startPromise, exitPromise, stdoutPromise, stderrPromise]).then(
       result => result[1]
@@ -74,12 +77,12 @@ export class RunProcess {
     this.stopReason = error || null
     if (this.running) {
       this.cmd.kill('SIGTERM')
-    }
-    if (sigKillTimeout) {
-      if (await waitFor(this.stopPromise, sigKillTimeout)) {
-        return await this.stopPromise
+      if (sigKillTimeout) {
+        if (await waitFor(this.stopPromise, sigKillTimeout)) {
+          return await this.stopPromise
+        }
+        this.cmd.kill('SIGKILL')
       }
-      this.cmd.kill('SIGKILL')
     }
     return await this.stopPromise
   }

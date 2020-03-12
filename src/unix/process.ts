@@ -9,7 +9,7 @@ export async function readPidFile(pidFile: string): Promise<number> {
     return 0
   }
   const pidFileBuffer = await fsReadFileAsync(pidFile)
-  const pidStr = pidFileBuffer.toString('uf8').replace(/\s+$/s, '')
+  const pidStr = pidFileBuffer.toString('utf8').replace(/\s+$/s, '')
   if (!pidStr.match(/^\d+$/)) {
     return 0
   }

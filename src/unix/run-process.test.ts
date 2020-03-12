@@ -1,4 +1,5 @@
 import { CommandEmulation } from './command-emulation'
+import { isPidRunning } from './process'
 import { RunProcess, StopBecauseOfOutputError } from './run-process'
 
 describe('run-process', () => {
@@ -8,11 +9,20 @@ describe('run-process', () => {
     await commandEmulation.cleanup()
   })
 
+  const processCleanup: Array<RunProcess> = []
+  afterEach(async () => {
+    // Make sure all process are stopped
+    for (const process of processCleanup) {
+      await process.stop()
+    }
+  })
+
   it('should start a process and wait for exit', async () => {
     await commandEmulation.registerCommand('my-hello', () => {
       console.log('hello')
     })
     const cmd = new RunProcess('my-hello')
+    processCleanup.push(cmd)
     const data: Buffer[] = []
     cmd.stdout?.on('data', chunk => {
       data.push(chunk)
@@ -49,6 +59,7 @@ describe('run-process', () => {
     })
 
     const cmd = new RunProcess('my-hello')
+    processCleanup.push(cmd)
 
     // Wait for application to start
     await cmd.waitForOutput(/Started.../)
@@ -66,6 +77,7 @@ describe('run-process', () => {
     })
 
     const cmd = new RunProcess('my-hello')
+    processCleanup.push(cmd)
     cmd.stopOnOutput(/you suck/)
 
     // Wait for application to start
@@ -90,6 +102,7 @@ describe('run-process', () => {
     })
 
     const cmd = new RunProcess('my-hello')
+    processCleanup.push(cmd)
     const data: Buffer[] = []
     cmd.stdout?.on('data', chunk => {
       data.push(chunk)
@@ -103,5 +116,19 @@ describe('run-process', () => {
     const exitCodePromise = cmd.waitForExit()
     await expect(exitCodePromise).resolves.toEqual({ code: 0, signal: null })
     expect(Buffer.concat(data).toString('utf8')).toEqual('Started my-hello...\nStopping...\n')
+  })
+
+  it(`should completely detach process`, async () => {
+    await commandEmulation.registerCommand('my-hello', () => {
+      setTimeout(() => {
+        // Make sure the process keeps running
+      }, 20000)
+    })
+
+    const cmd = new RunProcess('my-hello', [], { detached: true, stdio: ['ignore', 'ignore', 'ignore'] })
+    processCleanup.push(cmd)
+    const exitCodePromise = cmd.waitForExit()
+    await expect(exitCodePromise).resolves.toEqual({ code: 0, signal: null })
+    await expect(isPidRunning(cmd.pid)).resolves.toEqual(true)
   })
 })

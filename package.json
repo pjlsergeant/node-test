@@ -6,8 +6,8 @@
   "types": "build/dist/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
-    "build": "./node_modules/@connectedcars/setup/build/dist/bin/build.js -- src bin",
-    "build:js": "./node_modules/@connectedcars/setup/build/dist/bin/build.js --skip-typings -- src bin",
+    "build": "build src bin",
+    "build:js": "build --skip-typings -- src bin",
     "build:types": "tsc --emitDeclarationOnly",
     "lint": "eslint './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
     "lint:fix": "eslint --fix './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
@@ -36,8 +36,8 @@
     "@babel/plugin-proposal-optional-chaining": "7.8.3",
     "@babel/preset-env": "7.8.7",
     "@babel/preset-typescript": "7.8.3",
-    "@connectedcars/setup": "^0.7.0",
-    "@types/args": "^3.0.0",
+    "@connectedcars/setup": "^0.8.1",
+    "@types/yargs": "^15.0.4",
     "@types/jest": "25.1.4",
     "@types/mysql": "^2.15.9",
     "@types/node": "^13.9.0",
@@ -49,15 +49,15 @@
     "eslint": "6.8.0",
     "eslint-config-prettier": "6.10.0",
     "eslint-plugin-prettier": "3.1.2",
-    "eslint-plugin-simple-import-sort": "^5.0.1",
+    "eslint-plugin-simple-import-sort": "^5.0.2",
     "jest": "25.1.0",
     "mysql": "^2.18.1",
     "prettier": "1.19.1",
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "args": "^5.0.1",
-    "sinon": "^9.0.1"
+    "sinon": "^9.0.1",
+    "yargs": "^15.3.0"
   },
   "engines": {
     "node": ">=12.10.0"
