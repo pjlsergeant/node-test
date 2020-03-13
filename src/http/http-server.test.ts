@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { readBody } from './http-common'
+import { readHttpMessageBody } from './http-common'
 import { HttpServer, HttpServerOptions } from './http-server'
 
 export type TestHttpServerOptions = HttpServerOptions
@@ -14,7 +14,7 @@ class TestHttpServer extends HttpServer {
           return res.end('Hello world')
         }
         case '/json': {
-          const body = await readBody(req)
+          const body = await readHttpMessageBody(req)
           return res.end(body)
         }
         default: {
