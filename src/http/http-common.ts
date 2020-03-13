@@ -25,7 +25,7 @@ export type HttpTextRequest = Omit<HttpRequest, 'body'> & {
   body: string
 }
 
-export async function readBody(req: HttpIncomingMessage): Promise<Buffer> {
+export async function readHttpMessageBody(req: HttpIncomingMessage): Promise<Buffer> {
   return new Promise(resolve => {
     const body: Buffer[] = []
     req.on('data', chunk => {

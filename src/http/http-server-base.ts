@@ -10,7 +10,7 @@ import {
   HttpRequestListener,
   HttpServerError,
   HttpTextRequest,
-  readBody
+  readHttpMessageBody
 } from './http-common'
 
 export abstract class HttpServerBase<T extends http.Server | https.Server> {
@@ -101,7 +101,7 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
       method: req.method,
       url: req.url,
       headers: headers,
-      body: await readBody(req)
+      body: await readHttpMessageBody(req)
     })
   }
 
