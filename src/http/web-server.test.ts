@@ -6,7 +6,7 @@ import { WebServer, WebServerOptions } from './web-server'
 export type TestWebServerOptions = WebServerOptions
 
 class TestWebServer extends WebServer {
-  constructor(options: TestWebServerOptions = {}) {
+  public constructor(options: TestWebServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
       switch (req.url.replace(/\?.+$/, '')) {

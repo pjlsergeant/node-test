@@ -9,7 +9,7 @@ export type HttpServerOptions = http.ServerOptions & {
 }
 
 export class HttpServer extends HttpServerBase<http.Server> {
-  constructor(options: HttpServerOptions, requestListener: HttpRequestListener) {
+  public constructor(options: HttpServerOptions, requestListener: HttpRequestListener) {
     super(
       'http://localhost',
       http.createServer(options, (req, res) => {
