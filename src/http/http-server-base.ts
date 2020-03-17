@@ -2,6 +2,7 @@ import http from 'http'
 import https from 'http'
 import net from 'net'
 
+import { Json } from '../common'
 import {
   HttpIncomingMessage,
   HttpJsonRequest,
@@ -9,7 +10,7 @@ import {
   HttpRequestListener,
   HttpServerError,
   HttpTextRequest,
-  readBody
+  readHttpMessageBody
 } from './http-common'
 
 export abstract class HttpServerBase<T extends http.Server | https.Server> {
@@ -69,9 +70,9 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
     })
   }
 
-  public getJsonRequests(): HttpJsonRequest[] {
-    return this.requests.map(req => {
-      return { ...req, body: JSON.parse(req.body.toString('utf8')) }
+  public getJsonRequests<T = Json>(): HttpJsonRequest<T>[] {
+    return this.requests.map<HttpJsonRequest<T>>(req => {
+      return { ...req, body: req.body.length > 0 ? JSON.parse(req.body.toString('utf8')) : null }
     })
   }
 
@@ -100,7 +101,7 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
       method: req.method,
       url: req.url,
       headers: headers,
-      body: await readBody(req)
+      body: await readHttpMessageBody(req)
     })
   }
 
