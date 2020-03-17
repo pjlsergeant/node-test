@@ -70,8 +70,12 @@ export class MySQLServer {
   }
 
   private async init(): Promise<void> {
-    // TODO: Set logging to files
-    // TODO: Get pid of wrapper instead of mysql it self
+    // TODO: Add support for picking up running mysql
+    // 1. Check if mysqld is running using pid or start run-wrapper --detached mysqld
+    // 2. Open /data/stdout.log and scan for /ready for connections/
+    // 3. Test connection using port file
+    // TODO: Add support for destroying a running instance if it fails to start or is old version
+
     if (this.options.mysqlBaseDir) {
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
 
