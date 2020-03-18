@@ -2,30 +2,32 @@ import http from 'http'
 import https from 'http'
 import net from 'net'
 
+import { Json } from '../common'
 import {
   HttpIncomingMessage,
-  HttpJSONRequest as HttpJsonRequest,
+  HttpJsonRequest,
   HttpRequest,
   HttpRequestListener,
   HttpServerError,
-  HttpStringRequest as HttpTextRequest,
-  readBody
+  HttpTextRequest,
+  readHttpMessageBody
 } from './http-common'
 
-export class HttpServerBase<T extends http.Server | https.Server> {
-  public listenPort = 0
+export abstract class HttpServerBase<T extends http.Server | https.Server> {
+  public listenPort: number
   public listenUrl = ''
   protected httpServer: T
-  protected requests: HttpRequest[] = []
-
+  protected requests: HttpRequest[]
   private baseUrl: string
 
-  public constructor(baseUrl: string, httpServer: T) {
+  // TODO: Move to options instead of adding more params
+  public constructor(baseUrl: string, httpServer: T, listenPort = 0, requests: HttpRequest[] = []) {
     this.httpServer = httpServer
     this.baseUrl = baseUrl
+    this.listenPort = listenPort
+    this.requests = requests
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public on(event: string, listener: (...args: any[]) => void): this {
     this.httpServer.on(event, listener)
     return this
@@ -54,9 +56,9 @@ export class HttpServerBase<T extends http.Server | https.Server> {
     })
   }
 
-  public getJsonRequests(): HttpJsonRequest[] {
-    return this.requests.map(req => {
-      return { ...req, body: JSON.parse(req.body.toString('utf8')) }
+  public getJsonRequests<T = Json>(): HttpJsonRequest<T>[] {
+    return this.requests.map<HttpJsonRequest<T>>(req => {
+      return { ...req, body: req.body.length > 0 ? JSON.parse(req.body.toString('utf8')) : null }
     })
   }
 
@@ -71,7 +73,11 @@ export class HttpServerBase<T extends http.Server | https.Server> {
   }
 
   public clearRequests(): void {
-    this.requests = []
+    this.requests.length = 0
+  }
+
+  public reset(): void {
+    this.clearRequests()
   }
 
   protected handleRequest(
@@ -95,7 +101,7 @@ export class HttpServerBase<T extends http.Server | https.Server> {
       method: req.method,
       url: req.url,
       headers: headers,
-      body: await readBody(req)
+      body: await readHttpMessageBody(req)
     })
   }
 

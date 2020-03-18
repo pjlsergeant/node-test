@@ -6,7 +6,8 @@ import { HttpsServer, HttpsServerOptions } from './https-server'
 export type TestHttpsServerOptions = HttpsServerOptions
 
 class TestHttpsServer extends HttpsServer {
-  public constructor(options: HttpsServerOptions = {}) {
+  public constructor(options: TestHttpsServerOptions = {}) {
+
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {
@@ -43,7 +44,7 @@ describe('HttpServer', () => {
   })
 
   afterEach(async () => {
-    httpsServer.clearRequests()
+    httpsServer.reset()
   })
 
   it('Simple GET / with https', async () => {

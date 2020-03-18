@@ -17,15 +17,15 @@ export interface HttpRequest {
   body: Buffer
 }
 
-export type HttpJSONRequest = Omit<HttpRequest, 'body'> & {
-  body: Json
+export type HttpJsonRequest<T = Json> = Omit<HttpRequest, 'body'> & {
+  body: T | null
 }
 
-export type HttpStringRequest = Omit<HttpRequest, 'body'> & {
+export type HttpTextRequest = Omit<HttpRequest, 'body'> & {
   body: string
 }
 
-export async function readBody(req: HttpIncomingMessage): Promise<Buffer> {
+export async function readHttpMessageBody(req: HttpIncomingMessage): Promise<Buffer> {
   return new Promise(resolve => {
     const body: Buffer[] = []
     req.on('data', chunk => {
