@@ -6,7 +6,7 @@ import { HttpsServer, HttpsServerOptions } from './https-server'
 export type TestHttpsServerOptions = HttpsServerOptions
 
 class TestHttpsServer extends HttpsServer {
-  constructor(options: TestHttpsServerOptions = {}) {
+  public constructor(options: TestHttpsServerOptions = {}) {
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {

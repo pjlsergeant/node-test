@@ -16,30 +16,16 @@ import {
 export abstract class HttpServerBase<T extends http.Server | https.Server> {
   public listenPort: number
   public listenUrl = ''
-  private baseUrl: string
   protected httpServer: T
   protected requests: HttpRequest[]
+  private baseUrl: string
 
   // TODO: Move to options instead of adding more params
-  constructor(baseUrl: string, httpServer: T, listenPort = 0, requests: HttpRequest[] = []) {
+  public constructor(baseUrl: string, httpServer: T, listenPort = 0, requests: HttpRequest[] = []) {
     this.httpServer = httpServer
     this.baseUrl = baseUrl
     this.listenPort = listenPort
     this.requests = requests
-  }
-
-  protected handleRequest(
-    req: HttpIncomingMessage,
-    res: http.ServerResponse,
-    requestListener: HttpRequestListener
-  ): void {
-    try {
-      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
-        this.handleError(res, e)
-      })
-    } catch (e) {
-      this.handleError(res, e)
-    }
   }
 
   public on(event: string, listener: (...args: any[]) => void): this {
@@ -92,6 +78,20 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
 
   public reset(): void {
     this.clearRequests()
+  }
+
+  protected handleRequest(
+    req: HttpIncomingMessage,
+    res: http.ServerResponse,
+    requestListener: HttpRequestListener
+  ): void {
+    try {
+      Promise.all([this.saveRequest(req), Promise.resolve(requestListener(req, res))]).catch(e => {
+        this.handleError(res, e)
+      })
+    } catch (e) {
+      this.handleError(res, e)
+    }
   }
 
   protected async saveRequest(req: HttpIncomingMessage): Promise<void> {

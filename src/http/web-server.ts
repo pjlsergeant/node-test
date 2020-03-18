@@ -11,14 +11,14 @@ export type WebServerOptions = Omit<HttpsServerOptions, 'listenPort'> &
   }
 
 export class WebServer {
-  private httpServer: HttpServer
-  private httpsServer: HttpsServer
-
   public httpListenUrl = ''
   public httpsListenUrl = ''
+
+  private httpServer: HttpServer
+  private httpsServer: HttpsServer
   private requests: HttpRequest[] = []
 
-  constructor(options: WebServerOptions, requestListener: HttpRequestListener) {
+  public constructor(options: WebServerOptions, requestListener: HttpRequestListener) {
     const httpOption = {
       requests: this.requests,
       ...options,
@@ -31,6 +31,14 @@ export class WebServer {
     }
     this.httpServer = new HttpServer(httpOption, requestListener)
     this.httpsServer = new HttpsServer(httpsOption, requestListener)
+  }
+
+  public static getDefaultCertAgent(): https.Agent {
+    return HttpsServer.getDefaultCertAgent()
+  }
+
+  public static getDefaultClientCerts(): Required<Pick<https.AgentOptions, 'ca' | 'key' | 'cert'>> {
+    return HttpsServer.getDefaultClientCerts()
   }
 
   public on(event: string, listener: (...args: any[]) => void): this {
@@ -53,14 +61,6 @@ export class WebServer {
 
   public getCaAgent(): https.Agent {
     return this.httpsServer.getCaAgent()
-  }
-
-  public static getDefaultCertAgent(): https.Agent {
-    return HttpsServer.getDefaultCertAgent()
-  }
-
-  public static getDefaultClientCerts(): Required<Pick<https.AgentOptions, 'ca' | 'key' | 'cert'>> {
-    return HttpsServer.getDefaultClientCerts()
   }
 
   public getJsonRequests(): HttpJsonRequest[] {
