@@ -1,7 +1,27 @@
 export { Json, TypedSinonStub } from './common'
-export { createTempDirectory } from './unix'
 export { HttpServer, HttpServerOptions } from './http/http-server'
 export { HttpsServer, HttpsServerOptions } from './http/https-server'
 export { WebServer, WebServerOptions } from './http/web-server'
-export { readHttpMessageBody } from './http/http-common'
-export { CommandEmulation, CommandEmulationOptions } from './unix'
+export {
+  readHttpMessageBody,
+  HttpIncomingMessage,
+  HttpJsonRequest,
+  HttpRequest,
+  HttpRequestListener,
+  HttpServerError,
+  HttpTextRequest
+} from './http/http-common'
+export {
+  CommandEmulation,
+  CommandEmulationOptions,
+  isPidFileRunning,
+  isPidRunning,
+  createTempDirectory,
+  ExitBeforeOutputMatchError,
+  ExitInformation,
+  RunProcess,
+  StopBecauseOfOutputError,
+  TimeoutError,
+  readPidFile,
+  touchFiles
+} from './unix'
