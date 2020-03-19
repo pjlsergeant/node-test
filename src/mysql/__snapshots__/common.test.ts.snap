@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`generateMySQLServerConfig should generate generic config 1`] = `
+exports[`mysql common generateMySQLServerConfig should generate generic config 1`] = `
 "[mysqld]
 bind-address=127.0.0.1
 pid-file=/tmp/test/data/mysqld.local.pid
@@ -13,7 +13,7 @@ mysqlx=0
 "
 `;
 
-exports[`generateMySQLServerConfig should set user to mysql 1`] = `
+exports[`mysql common generateMySQLServerConfig should set user to mysql 1`] = `
 "[mysqld]
 bind-address=127.0.0.1
 pid-file=/tmp/test/data/mysqld.local.pid
@@ -27,7 +27,7 @@ mysqlx=0
 "
 `;
 
-exports[`getMySQLServerConfig should return the current mysql config 1`] = `
+exports[`mysql common getMySQLServerConfig should return the current mysql config 1`] = `
 Object {
   "mysqld": Object {
     "abort-slave-event-count": "0",

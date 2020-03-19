@@ -2,14 +2,12 @@ import fs from 'fs'
 import path from 'path'
 import util from 'util'
 
-const chmodAsync = util.promisify(fs.chmod)
-const mkdirAsync = util.promisify(fs.mkdir)
 const writeFileAsync = util.promisify(fs.writeFile)
-const readFileAsync = util.promisify(fs.readFile)
+const mkdirAsync = util.promisify(fs.mkdir)
 
 import { findFreePort } from '../net'
-import { createTempDirectory, isDockerOverlay2, isPidRunning, readPidFile, RunProcess, touchFiles } from '../unix'
-import { generateMySQLServerConfig, initializeMySQLData, MySQLServerConfig } from './common'
+import { createTempDirectory, isDockerOverlay2, isPidRunning, readPidFile, stopPid, touchFiles } from '../unix'
+import { generateMySQLServerConfig, initializeMySQLData, MySQLServerConfig, readPortFile, startMySQLd } from './common'
 
 export interface MySQLServerOptions {
   mysqlBaseDir?: string
@@ -18,14 +16,19 @@ export interface MySQLServerOptions {
   myCnf?: MySQLServerConfig
 }
 
+type InitStatus = 'unknown' | 'started' | 'initialized' | 'resumed'
+
+const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
+
 export class MySQLServer {
+  private initStatus: InitStatus = 'unknown'
   private listenPort!: number
   private mysqlBaseDir!: string
+  private timings: string[] = []
 
   private mysqldPath: string
   private myCnfCustom: MySQLServerConfig
-  private mysqldPid: number | null = null
-  private mySQLServerCmd: RunProcess | null = null
+  private mysqldPid!: number
   private initPromise: Promise<void>
   private options: MySQLServerOptions
 
@@ -39,24 +42,19 @@ export class MySQLServer {
     })
   }
 
-  public async stop(): Promise<void> {
+  public async getTimings(): Promise<string[]> {
     await this.initPromise // Make sure init has finished
-    if (this.mySQLServerCmd) {
-      await this.mySQLServerCmd.stop(0)
-    } else if (this.mysqldPid) {
-      process.kill(this.mysqldPid, 'SIGTERM')
-      const deadline = Date.now()
-      while (deadline > Date.now()) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        if (!(await isPidRunning(this.mysqldPid))) {
-          return
-        }
-      }
-      process.kill(this.mysqldPid, 'SIGKIll')
-      while (await isPidRunning(this.mysqldPid)) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-      }
-    }
+    return this.timings
+  }
+
+  public async getInitStatus(): Promise<InitStatus> {
+    await this.initPromise // Make sure init has finished
+    return this.initStatus
+  }
+
+  public async kill(sigKillTimeout = 3000): Promise<void> {
+    await this.initPromise // Make sure init has finished
+    await stopPid(this.mysqldPid, sigKillTimeout)
   }
 
   public async getListenPort(): Promise<number> {
@@ -70,89 +68,54 @@ export class MySQLServer {
   }
 
   private async init(): Promise<void> {
-    // TODO: Add support for picking up running mysql
-    // 1. Check if mysqld is running using pid or start run-wrapper --detached mysqld
-    // 2. Open /data/stdout.log and scan for /ready for connections/
-    // 3. Test connection using port file
-    // TODO: Add support for destroying a running instance if it fails to start or is old version
-
     if (this.options.mysqlBaseDir) {
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
 
       // Check if the mysqld is already running from this folder
       const pid = await readPidFile(`${path.join(this.mysqlBaseDir, '/data/mysqld.local.pid')}`)
       if (pid && (await isPidRunning(pid))) {
-        try {
-          const portStr = await (await readFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`)).toString(
-            'utf8'
-          )
-          this.listenPort = parseInt(portStr)
+        const listenPort = await readPortFile(path.join(this.mysqlBaseDir, '/data/mysqld.port'))
+        if (listenPort) {
           this.mysqldPid = pid
+          this.listenPort = listenPort
+          this.initStatus = 'resumed'
           return
-        } catch (e) {
-          // Ignore
         }
+        // Kill the pid if we did not read a listen port
+        await stopPid(pid, 3000)
       }
     } else {
       this.mysqlBaseDir = await createTempDirectory()
     }
 
-    // Make sure mysqlBaseDir exists and has the right permissions, /files is used for LOAD
-    await mkdirAsync(path.join(this.mysqlBaseDir, '/files'), { recursive: true, mode: 0o777 })
-    await chmodAsync(this.mysqlBaseDir, '777')
-
     // Initialize mysql data
+    let initialized = false
     if (!fs.existsSync(`${this.mysqlBaseDir}/data`)) {
       const myCnf: MySQLServerConfig = {}
       if (process.getuid() === 0) {
         // Drop privileges if running as root
         myCnf.mysqld.user = 'mysql'
       }
+
+      // Create base dir
+      await mkdirAsync(path.join(this.mysqlBaseDir), { recursive: true, mode: 0o777 })
       const config = generateMySQLServerConfig(this.mysqlBaseDir, { ...myCnf, ...this.myCnfCustom })
       await writeFileAsync(`${path.join(this.mysqlBaseDir, 'my.cnf')}`, config)
+      const initializeTime = process.hrtime()
       await initializeMySQLData(this.mysqldPath, this.mysqlBaseDir)
+      this.timings.push(formatHrDiff('initializeMySQLData', process.hrtime(initializeTime)))
+      initialized = true
     } else if (await isDockerOverlay2()) {
       // Working around issue with docker overlay2
       await touchFiles(this.mysqlBaseDir as string)
     }
 
-    // Find free port to start mysqld on
+    // Find free port and start mysqld
     this.listenPort = this.options.listenPort ? this.options.listenPort : await findFreePort()
-
-    // Start mysql process
-    const mysqldStartArgs = [
-      `--defaults-file=${this.mysqlBaseDir}/my.cnf`,
-      `--port=${this.listenPort}`,
-      '--default-authentication-plugin=mysql_native_password'
-    ]
-    // TODO: Find run-wrapper
-    this.mySQLServerCmd = new RunProcess(
-      './build/dist/bin/run-wrapper.js',
-      ['--', this.mysqldPath, ...mysqldStartArgs],
-      {
-        env: {
-          ...process.env,
-          EVENT_NOKQUEUE: '1'
-        }
-      }
-    )
-    let serverLog = ''
-    this.mySQLServerCmd.stdout?.on('data', chunk => {
-      //process.stdout.write(chunk)
-      serverLog += chunk.toString('utf8')
-    })
-    this.mySQLServerCmd.stderr?.on('data', chunk => {
-      //process.stderr.write(chunk)
-      serverLog += chunk.toString('utf8')
-    })
-
-    // 2019-02-04T21:30:25.515625Z 1 [ERROR] [MY-012574] [InnoDB] Unable to lock ./ibdata1 error: 35
-    this.mySQLServerCmd.stopOnOutput(/\[ERROR\]\s+\[MY-012574\]/, "Another mySQL instance is running so it can't lock")
-    try {
-      await this.mySQLServerCmd.waitForOutput(/ready for connections/)
-      await writeFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`, this.listenPort)
-    } catch (e) {
-      throw new Error(`Failed to start mysqld(${e}): ${serverLog}`)
-    }
+    const startTime = process.hrtime()
+    this.mysqldPid = await startMySQLd(this.mysqldPath, this.mysqlBaseDir, [`--port=${this.listenPort}`])
+    this.timings.push(formatHrDiff('startMySQLd', process.hrtime(startTime)))
+    await writeFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`, this.listenPort)
+    this.initStatus = initialized ? 'initialized' : 'started'
   }
 }

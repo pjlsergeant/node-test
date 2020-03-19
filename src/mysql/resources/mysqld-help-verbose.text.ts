@@ -1,4 +1,4 @@
-export const mysqlHelpVerbose = `mysqld  Ver 5.7.27 for osx10.14 on x86_64 (Homebrew)
+export const mysqlHelpVerboseText = `mysqld  Ver 5.7.27 for osx10.14 on x86_64 (Homebrew)
 Copyright (c) 2000, 2019, Oracle and/or its affiliates. All rights reserved.
 
 Oracle is a registered trademark of Oracle Corporation and/or its
