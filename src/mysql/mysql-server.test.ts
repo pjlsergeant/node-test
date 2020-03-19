@@ -52,7 +52,7 @@ describe('MySQLServer', () => {
     // Start mysql again letting it pickup the pid
     mySqlServer = new MySQLServer({ mysqlBaseDir: tmpDir })
     await expect(mySqlServer.getInitStatus()).resolves.toEqual('resumed')
-    console.log(await mySqlServer.getTimings())
+
     let connection: mysql.Connection | null = null
     try {
       const connectionUrl = `mysql://root:@127.0.0.1:${await mySqlServer.getListenPort()}/mysql?charset=utf8mb4&multipleStatements=true`

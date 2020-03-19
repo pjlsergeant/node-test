@@ -1,13 +1,8 @@
-import childProcess from 'child_process'
 import fs from 'fs'
-import path from 'path'
 import util from 'util'
 
 import { CommandEmulation, createTempDirectory, isPidRunning, readPidFile, RunProcess } from '../src/unix'
 
-const execAsync = util.promisify(childProcess.exec)
-const fsSymlink = util.promisify(fs.symlink)
-const fsUnlink = util.promisify(fs.unlink)
 const fsReadFile = util.promisify(fs.readFile)
 const existsAsync = util.promisify(fs.exists)
 
@@ -15,23 +10,11 @@ describe('run-wrapper', () => {
   const commandEmulation = new CommandEmulation()
 
   beforeAll(async () => {
-    // Make sure wrapper has been compiled
-    await execAsync('npm run build:js')
     await commandEmulation.registerPath('build/dist/bin')
-    try {
-      await fsUnlink('build/dist/bin/run-wrapper').catch(() => {
-        // TODO: validate that it's no entry we get
-      })
-      await fsSymlink(path.resolve('build/dist/bin/run-wrapper.js'), 'build/dist/bin/run-wrapper')
-    } catch (e) {
-      // Ignore
-    }
   }, 10000)
 
   afterAll(async () => {
-    await fsUnlink('build/dist/bin/run-wrapper').catch(() => {
-      // TODO: validate that it's no entry we get
-    })
+    await commandEmulation.cleanup()
   })
 
   const processCleanup: Array<RunProcess> = []

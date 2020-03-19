@@ -138,6 +138,7 @@ export async function startMySQLd(
   const stdoutPath = `${mysqlBaseDir}/stdout.log`
   const stderrPath = `${mysqlBaseDir}/stderr.log`
 
+  // TODO: Find way to get this in path
   const cmd = new RunProcess(
     './build/dist/bin/run-wrapper.js',
     [
