@@ -7,6 +7,7 @@ export type ExitInformation = { code: number | null; signal: NodeJS.Signals | nu
 export class TimeoutError extends Error {}
 export class ExitBeforeOutputMatchError extends Error {}
 export class StopBecauseOfOutputError extends Error {}
+export class StandardStreamsStillOpenError extends Error {}
 
 export class RunProcess {
   public cmd: ChildProcess
@@ -15,6 +16,7 @@ export class RunProcess {
   public stdout: ChildProcess['stdout'] = null
   public stderr: ChildProcess['stderr'] = null
   public running: boolean
+  public stopped = false
   public stopReason: Error | null = null
   public detached: boolean
 
@@ -65,9 +67,10 @@ export class RunProcess {
       ? new Promise<void>(resolve => this.cmd.stderr?.on('end', resolve))
       : Promise.resolve()
 
-    this.stopPromise = Promise.all([this.startPromise, exitPromise, stdoutPromise, stderrPromise]).then(
-      result => result[1]
-    )
+    this.stopPromise = Promise.all([this.startPromise, exitPromise, stdoutPromise, stderrPromise]).then(result => {
+      this.stopped = true
+      return result[1]
+    })
     this.stopPromise.catch(() => {
       // User might never bind to this promise if they are just starting a process not caring about if it runs on not
     })
@@ -83,7 +86,10 @@ export class RunProcess {
         }
         this.cmd.kill('SIGKILL')
       }
+    } else if (!this.stopped) {
+      throw new StandardStreamsStillOpenError('Process exited but standard steams are still open')
     }
+
     return await this.stopPromise
   }
 

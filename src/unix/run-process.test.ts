@@ -1,6 +1,6 @@
 import { CommandEmulation } from './command-emulation'
 import { isPidRunning } from './process'
-import { RunProcess, StopBecauseOfOutputError } from './run-process'
+import { RunProcess, StandardStreamsStillOpenError, StopBecauseOfOutputError } from './run-process'
 
 describe('run-process', () => {
   const commandEmulation = new CommandEmulation()
@@ -130,5 +130,22 @@ describe('run-process', () => {
     const exitCodePromise = cmd.waitForExit()
     await expect(exitCodePromise).resolves.toEqual({ code: 0, signal: null })
     await expect(isPidRunning(cmd.pid)).resolves.toEqual(true)
+  })
+
+  it(`should detach and fork a new process`, async () => {
+    await commandEmulation.registerCommand('sleeping', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+      const childProcess = require('child_process')
+      const child = childProcess.spawn('sh', ['-c', 'sleep 0.1; echo hello'], {
+        detached: true,
+        stdio: ['inherit', 'inherit', 'inherit']
+      })
+      child.unref()
+      process.exit(0)
+    })
+    const cmd = new RunProcess('sleeping', [])
+    await cmd.waitForOutput(/hello/)
+    const exitCodePromise = cmd.stop()
+    await expect(exitCodePromise).rejects.toThrow(StandardStreamsStillOpenError)
   })
 })
