@@ -67,6 +67,15 @@ export class MySQLServer {
     return this.mysqlBaseDir
   }
 
+  public async checkout(database: string, mode = 'ro'): Promise<string> {
+    // https://gist.github.com/christopher-hopper/8431737
+    // SHOW tables;
+    // CREATE DATABASE mysql2;
+    // CREATE TABLE mysql2.user LIKE mysql.`user`;
+    // INSERT INTO mysql2.`user` SELECT * FROM mysql.user;
+    return ''
+  }
+
   private async init(): Promise<void> {
     if (this.options.mysqlBaseDir) {
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
