@@ -8,6 +8,7 @@ export class TimeoutError extends Error {}
 export class ExitBeforeOutputMatchError extends Error {}
 export class StopBecauseOfOutputError extends Error {}
 export class StandardStreamsStillOpenError extends Error {}
+export class ProcessNotRunningError extends Error {}
 
 export class RunProcess {
   public cmd: ChildProcess
@@ -181,7 +182,10 @@ export class RunProcess {
     return this
   }
 
-  public kill(signal?: NodeJS.Signals): void {
-    this.cmd.kill(signal)
+  public kill(signal?: NodeJS.Signals): boolean {
+    if (!this.running) {
+      throw new ProcessNotRunningError()
+    }
+    return this.cmd.kill(signal)
   }
 }

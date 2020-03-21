@@ -1,6 +1,11 @@
 import { CommandEmulation } from './command-emulation'
 import { isPidRunning } from './process'
-import { RunProcess, StandardStreamsStillOpenError, StopBecauseOfOutputError } from './run-process'
+import {
+  ProcessNotRunningError,
+  RunProcess,
+  StandardStreamsStillOpenError,
+  StopBecauseOfOutputError
+} from './run-process'
 
 describe('run-process', () => {
   const commandEmulation = new CommandEmulation()
@@ -145,7 +150,10 @@ describe('run-process', () => {
     })
     const cmd = new RunProcess('sleeping', [])
     await cmd.waitForOutput(/hello/)
-    const exitCodePromise = cmd.stop()
-    await expect(exitCodePromise).rejects.toThrow(StandardStreamsStillOpenError)
+    const stopPromise = cmd.stop()
+    await expect(stopPromise).rejects.toThrow(StandardStreamsStillOpenError)
+    expect(() => {
+      cmd.kill()
+    }).toThrow(ProcessNotRunningError)
   })
 })
