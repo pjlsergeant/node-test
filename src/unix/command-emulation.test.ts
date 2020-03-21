@@ -25,12 +25,12 @@ function shell(command: string, options: ExecOptions = {}): Promise<CommandResul
 describe('ChildProcess', () => {
   const commandEmulation = new CommandEmulation()
 
-  beforeAll(async () => {
-    await commandEmulation.registerCommand('fake-global-command', 'echo hello global')
+  afterEach(async () => {
+    await commandEmulation.cleanup()
   })
 
   afterAll(async () => {
-    await commandEmulation.cleanup()
+    await commandEmulation.destroy()
   })
 
   it('should run faked sh command with local path', async () => {
@@ -84,15 +84,6 @@ describe('ChildProcess', () => {
     expect(result).toMatchObject({
       code: 0,
       stdout: expect.stringMatching(/^Hello stuff/),
-      stderr: ''
-    })
-  })
-
-  it('should run faked command from global PATH', async () => {
-    const result = await shell('fake-global-command')
-    expect(result).toMatchObject({
-      code: 0,
-      stdout: 'hello global\n',
       stderr: ''
     })
   })
