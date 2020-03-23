@@ -28,6 +28,7 @@ export abstract class HttpServerBase<T extends http.Server | https.Server> {
     this.requests = requests
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public on(event: string, listener: (...args: any[]) => void): this {
     this.httpServer.on(event, listener)
     return this

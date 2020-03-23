@@ -79,11 +79,19 @@ export class CommandEmulation {
 
   public async cleanup(): Promise<void> {
     await this.initPromise // Make sure init has finished
-    process.env.PATH = this.oldPath
-    for (const command of this.commands) {
-      await unlinkAsync(command)
+    while (this.commands.length > 0) {
+      const command = this.commands.shift()
+      if (command) {
+        await unlinkAsync(command)
+      }
     }
-    await rmdirAsync(this.tmpdir)
+  }
+
+  public async destroy(): Promise<void> {
+    await this.initPromise // Make sure init has finished
+    await this.cleanup()
+    process.env.PATH = process.env.PATH === this.tmpdir ? '' : process.env.PATH?.replace(`${this.tmpdir}:`, '')
+    await rmdirAsync(this.tmpdir, { recursive: true })
     this.initPromise = Promise.reject(new Error(`Need to run setup again`)).catch(() => {
       // Do nothing as we will throw at later calls
     })
