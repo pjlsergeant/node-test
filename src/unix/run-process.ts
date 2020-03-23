@@ -1,5 +1,4 @@
 import { ChildProcess, SendHandle, Serializable, spawn } from 'child_process'
-import { EventEmitter } from 'events'
 
 import { waitFor } from '../promise'
 
