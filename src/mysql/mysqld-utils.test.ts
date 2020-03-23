@@ -1,5 +1,10 @@
 import { CommandEmulation, createTempDirectory } from '../unix'
-import { generateMySQLServerConfig, getMySQLServerConfig, getMySQLServerVersionString, startMySQLd } from './common'
+import {
+  generateMySQLServerConfig,
+  getMySQLServerConfig,
+  getMySQLServerVersionString,
+  startMySQLd
+} from './mysqld-utils'
 import { mysqlHelpVerboseText } from './resources/mysqld-help-verbose.text'
 import { mysqlStartText } from './resources/mysqld-start.text'
 

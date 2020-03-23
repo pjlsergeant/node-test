@@ -18,14 +18,14 @@ async function query<T>(connection: mysql.Connection, sql: string): Promise<T[]>
   })
 }
 
-describe('MySQLServer', () => {
+describe('MySQLServer startup', () => {
   let mySqlServer: MySQLServer | null = null
 
   afterEach(async () => {
     await mySqlServer?.kill()
   })
 
-  it('Should start a new database server in a tmp folder', async () => {
+  it.skip('Should start a new database server in a tmp folder', async () => {
     // TODO: Add support for getting a cloned database, https://dev.mysql.com/doc/refman/5.7/en/create-table-like.html
     // fx. mySqlServer.getConnectionUrl('mysql') -> 'mysql://.../mysql-test-copy'
     mySqlServer = new MySQLServer()
@@ -40,7 +40,7 @@ describe('MySQLServer', () => {
     }
   }, 10000)
 
-  it('Should start a new database server and resume it after', async () => {
+  it.skip('Should start a new database server and resume it after', async () => {
     const tmpDir = await createTempDirectory()
 
     // Do initial mysql start
@@ -63,4 +63,28 @@ describe('MySQLServer', () => {
       connection?.end()
     }
   }, 10000)
+})
+
+const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
+
+describe('MySQLServer', () => {
+  const mySqlServer = new MySQLServer({ mysqlBaseDir: 'mysql-context' })
+
+  afterEach(async () => {
+    await mySqlServer?.cleanup()
+  })
+
+  it('Query test', async () => {
+    let pool: mysql.Pool | null = null
+    try {
+      const copyTime = process.hrtime()
+      const database = await mySqlServer.checkout('mysql') // copy time 0s 428.431469ms
+      console.log(formatHrDiff('copy time', process.hrtime(copyTime)))
+      pool = await mySqlServer.getConnectionPool(database)
+      const users = await mySqlServer.query<{ user: string }>(pool, `SELECT CONCAT(user, '@', host) AS user FROM user;`)
+      console.log(users)
+    } finally {
+      pool?.end
+    }
+  })
 })

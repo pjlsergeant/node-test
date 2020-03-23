@@ -1,4 +1,6 @@
+import crypto from 'crypto'
 import fs from 'fs'
+import mysql from 'mysql'
 import path from 'path'
 import util from 'util'
 
@@ -7,7 +9,13 @@ const mkdirAsync = util.promisify(fs.mkdir)
 
 import { findFreePort } from '../net'
 import { createTempDirectory, isDockerOverlay2, isPidRunning, readPidFile, stopPid, touchFiles } from '../unix'
-import { generateMySQLServerConfig, initializeMySQLData, MySQLServerConfig, readPortFile, startMySQLd } from './common'
+import {
+  generateMySQLServerConfig,
+  initializeMySQLData,
+  MySQLServerConfig,
+  readPortFile,
+  startMySQLd
+} from './mysqld-utils'
 
 export interface MySQLServerOptions {
   mysqlBaseDir?: string
@@ -31,6 +39,7 @@ export class MySQLServer {
   private mysqldPid!: number
   private initPromise: Promise<void>
   private options: MySQLServerOptions
+  private databasePools: { [key: string]: mysql.Pool } = {}
 
   public constructor(options: MySQLServerOptions = {}) {
     this.options = options
@@ -67,17 +76,128 @@ export class MySQLServer {
     return this.mysqlBaseDir
   }
 
+  public async getConnectionPool(database: string, cache = true): Promise<mysql.Pool> {
+    await this.initPromise // Make sure init has finished
+    let pool = cache ? this.databasePools[database] : null
+    if (!pool) {
+      pool = mysql.createPool({
+        host: '127.0.0.1',
+        user: 'root',
+        password: '',
+        database: database,
+        connectionLimit: 100,
+        insecureAuth: true,
+        multipleStatements: true
+      })
+      if (cache) {
+        this.databasePools[database] = pool
+      }
+    }
+    return pool
+  }
+
+  public async cleanup(): Promise<void> {
+    for (const database of Object.keys(this.databasePools)) {
+      await new Promise(resolve => this.databasePools[database].end(resolve))
+      delete this.databasePools[database]
+    }
+  }
+
+  public async query<T extends { [key: string]: unknown }>(
+    pool: mysql.Pool | mysql.Connection,
+    sql: string,
+    values?: string[]
+  ): Promise<T[]> {
+    await this.initPromise // Make sure init has finished
+    console.log(sql)
+    return new Promise((resolve, reject) => {
+      pool.query(sql, values, (error, results) => {
+        if (error) {
+          return reject(error)
+        }
+        return resolve(results as [])
+      })
+    })
+  }
+
+  // https://gist.github.com/christopher-hopper/8431737
   public async checkout(database: string, mode = 'ro'): Promise<string> {
-    // https://gist.github.com/christopher-hopper/8431737
-    // SHOW tables;
-    // CREATE DATABASE mysql2;
-    // CREATE TABLE mysql2.user LIKE mysql.`user`;
-    // INSERT INTO mysql2.`user` SELECT * FROM mysql.user;
-    return ''
+    await this.initPromise // Make sure init has finished
+
+    let pool: mysql.Pool | null = null
+    try {
+      // Disable foreign keys for these connections
+      pool = await this.getConnectionPool(database, false)
+      pool.on('connection', connection => {
+        connection.query(`
+          SET SESSION FOREIGN_KEY_CHECKS=0;
+          SET SQL_MODE='ALLOW_INVALID_DATES'
+        `)
+      })
+
+      // Create target database
+      const databasePostfix = crypto.randomBytes(2).toString('hex')
+      const destinationDatabase = `${database}-${databasePostfix}`
+      await this.cloneDatabase(pool, destinationDatabase)
+
+      return destinationDatabase
+    } finally {
+      pool?.end()
+    }
+  }
+
+  public async cloneDatabase(pool: mysql.Pool, destinationDatabase: string): Promise<void> {
+    // Fetch charset and collation from source database
+    const dbInfo = await this.query<{ charset: string; collation: string }>(
+      pool,
+      `
+        SELECT default_character_set_name AS 'charset', DEFAULT_COLLATION_NAME AS 'collation'
+        FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE();
+      `
+    )
+
+    await this.query(
+      pool,
+      `
+        CREATE DATABASE \`${destinationDatabase}\` CHARACTER SET ${dbInfo[0].charset} COLLATE ${dbInfo[0].collation};
+      `
+    )
+
+    // Copy all tables from source to target database
+    const tables = await this.query<{ name: string }>(
+      pool,
+      `
+        SELECT TABLE_NAME AS name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE();
+      `
+    )
+
+    const promises: Promise<void>[] = []
+    for (const table of tables) {
+      promises.push(this.cloneTable(pool, table.name, destinationDatabase, table.name))
+    }
+    await Promise.all(promises)
+  }
+
+  public async cloneTable(
+    pool: mysql.Pool,
+    sourceTable: string,
+    destinationDatabase: string,
+    destinationTable: string
+  ): Promise<void> {
+    await this.query(
+      pool,
+      `
+        CREATE TABLE \`${destinationDatabase}\`.\`${destinationTable}\` LIKE \`${sourceTable}\`;
+        ALTER TABLE \`${destinationDatabase}\`.\`${destinationTable}\` DISABLE KEYS;
+        INSERT INTO \`${destinationDatabase}\`.\`${destinationTable}\` SELECT * FROM \`${sourceTable}\`;
+        ALTER TABLE \`${destinationDatabase}\`.\`${destinationTable}\` ENABLE KEYS;
+      `
+    )
   }
 
   private async init(): Promise<void> {
     if (this.options.mysqlBaseDir) {
+      // TODO: Drop mysqlBaseDir if the version of configuration has changed.
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
 
       // Check if the mysqld is already running from this folder
@@ -105,6 +225,16 @@ export class MySQLServer {
         // Drop privileges if running as root
         myCnf.mysqld.user = 'mysql'
       }
+
+      // TODO: Cache initializeMySQLData
+      // time tar -czf mysql-context.tar.gz mysql-context/
+      // real	0m0.932s
+      // user	0m0.862s
+      // sys	0m0.057s
+      // time tar -xzf mysql-context.tar.gz
+      // real	0m0.393s
+      // user	0m0.222s
+      // sys	0m0.158s
 
       // Create base dir
       await mkdirAsync(path.join(this.mysqlBaseDir), { recursive: true, mode: 0o777 })
