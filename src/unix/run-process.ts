@@ -1,4 +1,5 @@
 import { ChildProcess, SendHandle, Serializable, spawn } from 'child_process'
+import { EventEmitter } from 'events'
 
 import { waitFor } from '../promise'
 
@@ -123,36 +124,61 @@ export class RunProcess {
     return await this.stopPromise
   }
 
-  public waitForOutput(
+  public async waitForOutput(
     regex: RegExp,
     timeout = 0,
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
   ): Promise<RegExpMatchArray> {
-    return new Promise((resolve, reject) => {
-      let timeoutHandle: NodeJS.Timeout | null = null
-      if (timeout) {
-        timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
-      }
+    const listeners: Array<['stdout' | 'stderr', (chunk: Buffer) => void]> = []
+    try {
+      return await new Promise((resolve, reject) => {
+        let timeoutHandle: NodeJS.Timeout | null = null
+        if (timeout) {
+          timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
+        }
 
-      let data = ''
-      for (const output of outputs) {
-        this[output]?.on('data', (chunk: Buffer) => {
-          data += chunk.toString('utf8')
-          const match = data.match(regex)
-          if (match) {
-            if (timeoutHandle) {
-              clearTimeout(timeoutHandle)
+        // Setup match listener for both stdout and stderr
+        let data = ''
+        for (const output of outputs) {
+          const matchListener = (chunk: Buffer): void => {
+            data += chunk.toString('utf8')
+            const match = data.match(regex)
+            if (match) {
+              if (timeoutHandle) {
+                clearTimeout(timeoutHandle)
+              }
+              resolve(match)
             }
-            resolve(match)
           }
+          listeners.push([output, matchListener])
+          this[output]?.on('data', matchListener)
+        }
+        // Throw if the process exist before finding the output
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.stopPromise.then(() => {
+          reject(this.stopReason ? this.stopReason : new ExitBeforeOutputMatchError(data))
         })
-      }
-      // Throw if the process exist before finding the output
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.stopPromise.then(() => {
-        reject(this.stopReason ? this.stopReason : new ExitBeforeOutputMatchError(data))
       })
-    })
+    } finally {
+      // Make sure we stop listening when match is found
+      for (const [output, listener] of listeners) {
+        this[output]?.removeListener('data', listener)
+      }
+    }
+  }
+
+  public removeListener(event: string | symbol, listener: (...args: unknown[]) => void): this {
+    this.cmd.removeListener(event, listener)
+    return this
+  }
+
+  public removeAllListeners(event?: string | symbol | undefined): this {
+    this.cmd.removeAllListeners(event)
+    return this
+  }
+
+  public listeners(event: string | symbol): Function[] {
+    return this.cmd.listeners(event)
   }
 
   public on(event: 'close', listener: (code: number, signal: NodeJS.Signals) => void): this

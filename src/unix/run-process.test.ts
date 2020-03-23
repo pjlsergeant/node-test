@@ -47,6 +47,10 @@ describe('run-process', () => {
     // Wait for application to start
     await cmd.waitForOutput(/Started.../)
 
+    // Make sure we don't leak listeners
+    expect(cmd.stdout?.listenerCount('data')).toEqual(0)
+    expect(cmd.stderr?.listenerCount('data')).toEqual(0)
+
     const res = await cmd.stop()
     expect(res).toEqual({ code: null, signal: 'SIGTERM' })
   })
