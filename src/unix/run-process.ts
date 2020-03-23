@@ -24,7 +24,9 @@ export class RunProcess {
 
   private startPromise: Promise<void>
   private stopPromise: Promise<ExitInformation>
+  // TODO: Expose all throws to the error listener
   private errorListeners: Array<(err: Error) => void> = []
+  private exitListeners: Array<(code: number | null, signal: NodeJS.Signals | null) => void> = []
 
   public constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
@@ -73,9 +75,15 @@ export class RunProcess {
       this.stopped = true
       return result[1]
     })
-    this.stopPromise.catch(() => {
-      // User might never bind to this promise if they are just starting a process not caring about if it runs on not
-    })
+    this.stopPromise
+      .then(res => {
+        for (const listener of this.exitListeners) {
+          listener(res.code, res.signal)
+        }
+      })
+      .catch(() => {
+        // User might never bind to this promise if they are just starting a process not caring about if it runs on not
+      })
   }
 
   public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
@@ -168,12 +176,38 @@ export class RunProcess {
   }
 
   public removeListener(event: string | symbol, listener: (...args: unknown[]) => void): this {
-    this.cmd.removeListener(event, listener)
+    switch (event) {
+      case 'exit': {
+        this.exitListeners = this.exitListeners.filter(l => listener != l)
+        break
+      }
+      case 'error': {
+        this.errorListeners = this.errorListeners.filter(l => listener != l)
+        this.cmd.removeListener(event, listener)
+        break
+      }
+      default: {
+        this.cmd.removeListener(event, listener)
+      }
+    }
     return this
   }
 
   public removeAllListeners(event?: string | symbol | undefined): this {
-    this.cmd.removeAllListeners(event)
+    switch (event) {
+      case 'exit': {
+        this.exitListeners = []
+        break
+      }
+      case 'error': {
+        this.errorListeners = []
+        this.cmd.removeAllListeners(event)
+        break
+      }
+      default: {
+        this.cmd.removeAllListeners(event)
+      }
+    }
     return this
   }
 
@@ -190,10 +224,7 @@ export class RunProcess {
   public on(event: string, listener: (...args: any[]) => void): this {
     switch (event) {
       case 'exit': {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.stopPromise.then(res => {
-          listener(res.code, res.signal)
-        })
+        this.exitListeners.push(listener)
         break
       }
       case 'error': {
