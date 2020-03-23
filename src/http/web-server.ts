@@ -41,6 +41,7 @@ export class WebServer {
     return HttpsServer.getDefaultClientCerts()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public on(event: string, listener: (...args: any[]) => void): this {
     this.httpServer.on(event, listener)
     this.httpsServer.on(event, listener)

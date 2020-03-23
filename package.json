@@ -1,12 +1,13 @@
 {
   "name": "@connectedcars/test",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Test utilities for Node projects",
   "main": "build/dist/src/index.js",
-  "types": "build/dist/index.d.ts",
   "bin": {
-    "run-wrapper": "build/dist/bin/run-wrapper.js"
+    "run-wrapper": "build/dist/bin/run-wrapper.js",
+    "local-mysql": "build/dist/bin/local-mysql.js"
   },
+  "types": "build/dist/src/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
     "build": "build src bin",
