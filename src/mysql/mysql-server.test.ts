@@ -64,27 +64,3 @@ describe('MySQLServer startup', () => {
     }
   }, 10000)
 })
-
-const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
-
-describe('MySQLServer', () => {
-  const mySqlServer = new MySQLServer({ mysqlBaseDir: 'mysql-context' })
-
-  afterEach(async () => {
-    await mySqlServer?.cleanup()
-  })
-
-  it('Query test', async () => {
-    let pool: mysql.Pool | null = null
-    try {
-      const copyTime = process.hrtime()
-      const database = await mySqlServer.checkout('mysql') // copy time 0s 428.431469ms
-      console.log(formatHrDiff('copy time', process.hrtime(copyTime)))
-      pool = await mySqlServer.getConnectionPool(database)
-      const users = await mySqlServer.query<{ user: string }>(pool, `SELECT CONCAT(user, '@', host) AS user FROM user;`)
-      console.log(users)
-    } finally {
-      pool?.end
-    }
-  })
-})
