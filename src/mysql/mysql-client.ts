@@ -15,6 +15,7 @@ export class MySQLClient {
       connectionLimit: 100,
       insecureAuth: true,
       multipleStatements: true,
+      charset: 'utf8mb4',
       ...options
     }
   }
@@ -33,11 +34,7 @@ export class MySQLClient {
     return pool
   }
 
-  public async query<T extends { [key: string]: unknown }>(
-    pool: mysql.Pool | mysql.Connection,
-    sql: string,
-    values?: string[]
-  ): Promise<T[]> {
+  public async query<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T[]> {
     console.log(sql)
     return new Promise((resolve, reject) => {
       pool.query(sql, values, (error, results) => {
@@ -47,6 +44,30 @@ export class MySQLClient {
         return resolve(results as [])
       })
     })
+  }
+
+  public async queryArray<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T[]> {
+    const result = await this.query<{ [key: string]: T }>(pool, sql, values)
+    if (result.length == 0) {
+      return []
+    }
+    const column = Object.keys(result[0])[0]
+    return result.map(r => r[column])
+  }
+
+  public async createTmpDatabase(): Promise<string> {
+    const pool = await this.getConnectionPool('mysql')
+    const database = 'tmp-' + crypto.randomBytes(4).toString('hex')
+    await this.query(
+      pool,
+      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`
+    )
+    return database
+  }
+
+  public async dropDatabase(database: string): Promise<void> {
+    const pool = await this.getConnectionPool('mysql')
+    await this.query(pool, `DROP DATABASE IF EXISTS \`${database}\`;`)
   }
 
   // https://gist.github.com/christopher-hopper/8431737

@@ -3,7 +3,7 @@ import { MySQLServer } from './mysql-server'
 
 const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
 
-describe('MySQLServer', () => {
+describe('MySQLClient', () => {
   let mySqlClient: MySQLClient
   beforeAll(async () => {
     const mySqlServer = new MySQLServer({ mysqlBaseDir: 'mysql-context' })
