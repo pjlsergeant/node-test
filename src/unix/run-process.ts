@@ -1,4 +1,6 @@
-import { ChildProcess, SendHandle, Serializable, spawn } from 'child_process'
+import { ChildProcess, exec, SendHandle, Serializable, spawn } from 'child_process'
+import * as fs from 'fs'
+import * as net from 'net'
 
 import { waitFor } from '../promise'
 
@@ -9,9 +11,23 @@ export class ExitBeforeOutputMatchError extends Error {}
 export class StopBecauseOfOutputError extends Error {}
 export class StandardStreamsStillOpenError extends Error {}
 export class ProcessNotRunningError extends Error {}
+export class NoNamedPipeError extends Error {}
+
+export interface NamedPipe {
+  location: string
+  listener: net.Socket | undefined
+  outData: Array<Buffer>
+  outDataStr: string
+}
+
+export function isNamedPipe(x: NamedPipe | undefined): x is NamedPipe {
+  return x !== undefined
+}
 
 export class RunProcess {
   public cmd: ChildProcess
+  public isExec: boolean
+  public namedPipe: NamedPipe | undefined = undefined
   public readonly pid: number = 0
   public stdin: ChildProcess['stdin'] = null
   public stdout: ChildProcess['stdout'] = null
@@ -27,13 +43,34 @@ export class RunProcess {
   private errorListeners: Array<(err: Error) => void> = []
   private exitListeners: Array<(code: number | null, signal: NodeJS.Signals | null) => void> = []
 
-  public constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
+  public constructor(
+    command: string,
+    args?: string[],
+    options?: Parameters<typeof spawn>[2],
+    shouldExec = false,
+    namedPipeLocation?: string
+  ) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
-    this.cmd = spawn(command, args || [], options)
+
+    // Exec or spawn command
+    shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
+    this.isExec = shouldExec
     this.detached = options.detached ? options.detached : false
+
+    if (namedPipeLocation !== undefined) {
+      this.namedPipe = {
+        location: namedPipeLocation,
+        server: undefined,
+        outData: [] as Buffer[],
+        outDataStr: '',
+        isSelfCreatedPipe: false,
+        listener: undefined
+      } as NamedPipe
+    }
+
+    // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
     if (this.cmd.pid) {
-      // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
       this.pid = this.cmd.pid
       this.stdin = this.cmd.stdin
       this.stdout = this.cmd.stdout
@@ -85,9 +122,90 @@ export class RunProcess {
       })
   }
 
+  /**
+   * We can't do async stuff in the constructor, manually call this
+   * https://stackoverflow.com/questions/44982499/read-from-a-named-pipe-fifo-with-node-js/46965930
+   */
+  public async setupNamedPipeServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (isNamedPipe(this.namedPipe)) {
+        fs.open(this.namedPipe.location, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, (err, fd) => {
+          if (err) {
+            reject(err)
+          }
+          if (isNamedPipe(this.namedPipe)) {
+            this.namedPipe.listener = new net.Socket({ fd })
+
+            this.namedPipe.listener.on('data', chunk => {
+              if (this.namedPipe !== undefined) {
+                this.namedPipe.outData.push(chunk)
+                this.namedPipe.outDataStr += chunk.toString('utf8')
+              }
+            })
+          }
+
+          // Resolve when we have set up the events
+          resolve()
+        })
+      } else {
+        throw new NoNamedPipeError('No named pipe set, when setting up the listener')
+      }
+    })
+  }
+
+  public async writeToNamedPipe(input: string): Promise<void> {
+    if (this.namedPipe !== undefined) {
+      await new RunProcess('echo', [`${input} > ${this.namedPipe.location}`], { shell: true }).waitForExit()
+    } else {
+      throw new NoNamedPipeError(`No named pipe set, when writing data: ${input}`)
+    }
+  }
+
+  public async waitForNamedPipeOutput(regex: RegExp, timeout = 0): Promise<RegExpMatchArray> {
+    return await new Promise((resolve, reject) => {
+      let timeoutHandle: NodeJS.Timeout | null = null
+      if (timeout) {
+        timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
+      }
+
+      // Check for input every 100 ms
+      setInterval(() => {
+        if (isNamedPipe(this.namedPipe)) {
+          const match = this.namedPipe.outDataStr.match(regex)
+          if (match) {
+            if (timeoutHandle) {
+              clearTimeout(timeoutHandle)
+            }
+            resolve(match)
+          }
+        } else {
+          reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
+        }
+      }, 100)
+
+      // Throw if the process exist before finding the output
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.stopPromise.then(() => {
+        reject(
+          this.stopReason
+            ? this.stopReason
+            : new ExitBeforeOutputMatchError(
+                `Process exitted before regex: ${regex} was found.\nTotal outDataStr:\n${this.namedPipe?.outDataStr}`
+              )
+        )
+      })
+    })
+  }
+
   public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
     this.stopReason = error || null
     if (this.running) {
+      // Close named pipe stuff
+      if (isNamedPipe(this.namedPipe)) {
+        this.namedPipe.listener?.removeAllListeners()
+        this.namedPipe.listener?.end()
+      }
+
       this.cmd.kill('SIGTERM')
       if (sigKillTimeout) {
         if (await waitFor(this.stopPromise, sigKillTimeout)) {
@@ -244,4 +362,9 @@ export class RunProcess {
     }
     return this.cmd.kill(signal)
   }
+}
+
+// Create named pipe manually, since we will have problems in the constructor/order stuff happens. In real examples the pipe needs to exist before the process is run anyway.
+export async function createNamedPipe(pipeLocation: string): Promise<void> {
+  await new RunProcess('mkfifo', [pipeLocation]).waitForExit()
 }
