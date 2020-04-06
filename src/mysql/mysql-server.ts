@@ -77,6 +77,11 @@ export class MySQLServer {
     return this.listenPort
   }
 
+  public async getConnectionUrl(database: string): Promise<string> {
+    await this.initPromise
+    return `mysql://root:@127.0.0.1:${this.listenPort}/${database}?charset=utf8mb4&multipleStatements=true`
+  }
+
   public async getMysqlBaseDir(): Promise<string> {
     await this.initPromise // Make sure init has finished
     return this.mysqlBaseDir
@@ -123,13 +128,10 @@ export class MySQLServer {
       await mkdirAsync(path.join(this.mysqlBaseDir, '/files'), { recursive: true, mode: 0o777 })
       await chmodAsync(path.join(this.mysqlBaseDir, '/files'), '777')
 
-      // Generate unique cache key based on mysql version and config content
+      // Generate unique cache key based on mysql version
       const mysqlVersion = await getMySQLServerVersionString(this.mysqldPath)
       const hash = crypto.createHash('sha1')
-      const cacheCheckSum = hash
-        .update(mysqlVersion)
-        .update(config)
-        .digest('hex')
+      const cacheCheckSum = hash.update(mysqlVersion).digest('hex') // TODO: Also add calculation for myCnf
       const initializeDataTarGz = path.resolve(path.join(this.cachePath, `initialize-data-${cacheCheckSum}.tar.gz`))
 
       // initialize mysql data folder
