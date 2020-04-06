@@ -1,14 +1,20 @@
+import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import util from 'util'
 
 const writeFileAsync = util.promisify(fs.writeFile)
 const mkdirAsync = util.promisify(fs.mkdir)
+const existsAsync = util.promisify(fs.exists)
+const chmodAsync = util.promisify(fs.chmod)
 
 import { findFreePort } from '../net'
 import { createTempDirectory, isDockerOverlay2, isPidRunning, readPidFile, stopPid, touchFiles } from '../unix'
 import {
+  createMySQLDataCache,
+  extractMySQLDataCache,
   generateMySQLServerConfig,
+  getMySQLServerVersionString,
   initializeMySQLData,
   MySQLServerConfig,
   readPortFile,
@@ -19,6 +25,7 @@ export interface MySQLServerOptions {
   mysqlBaseDir?: string
   listenPort?: number
   mysqldPath?: string
+  cachePath?: string
   myCnf?: MySQLServerConfig
 }
 
@@ -37,10 +44,12 @@ export class MySQLServer {
   private mysqldPid!: number
   private initPromise: Promise<void>
   private options: MySQLServerOptions
+  private cachePath: string
 
   public constructor(options: MySQLServerOptions = {}) {
     this.options = options
     this.mysqldPath = options.mysqldPath || 'mysqld'
+    this.cachePath = options.cachePath || './cache'
     this.myCnfCustom = options.myCnf || {}
     this.initPromise = this.init()
     this.initPromise.catch(() => {
@@ -104,22 +113,34 @@ export class MySQLServer {
         myCnf.mysqld.user = 'mysql'
       }
 
-      // TODO: Cache initializeMySQLData
-      // time tar -czf mysql-context.tar.gz mysql-context/
-      // real	0m0.932s
-      // user	0m0.862s
-      // sys	0m0.057s
-      // time tar -xzf mysql-context.tar.gz
-      // real	0m0.393s
-      // user	0m0.222s
-      // sys	0m0.158s
-
       // Create base dir
       await mkdirAsync(path.join(this.mysqlBaseDir), { recursive: true, mode: 0o777 })
+      await chmodAsync(this.mysqlBaseDir, '777')
       const config = generateMySQLServerConfig(this.mysqlBaseDir, { ...myCnf, ...this.myCnfCustom })
       await writeFileAsync(`${path.join(this.mysqlBaseDir, 'my.cnf')}`, config)
+
+      // Make sure /files exists as it is used for LOAD
+      await mkdirAsync(path.join(this.mysqlBaseDir, '/files'), { recursive: true, mode: 0o777 })
+      await chmodAsync(path.join(this.mysqlBaseDir, '/files'), '777')
+
+      // Generate unique cache key based on mysql version and config content
+      const mysqlVersion = await getMySQLServerVersionString(this.mysqldPath)
+      const hash = crypto.createHash('sha1')
+      const cacheCheckSum = hash
+        .update(mysqlVersion)
+        .update(config)
+        .digest('hex')
+      const initializeDataTarGz = path.resolve(path.join(this.cachePath, `initialize-data-${cacheCheckSum}.tar.gz`))
+
+      // initialize mysql data folder
       const initializeTime = process.hrtime()
-      await initializeMySQLData(this.mysqldPath, this.mysqlBaseDir)
+      if (await existsAsync(initializeDataTarGz)) {
+        await extractMySQLDataCache(this.mysqlBaseDir, initializeDataTarGz)
+      } else {
+        await initializeMySQLData(this.mysqldPath, this.mysqlBaseDir)
+        await mkdirAsync(this.cachePath, { recursive: true, mode: 0o777 })
+        await createMySQLDataCache(this.mysqlBaseDir, initializeDataTarGz)
+      }
       this.timings.push(formatHrDiff('initializeMySQLData', process.hrtime(initializeTime)))
       initialized = true
     } else if (await isDockerOverlay2()) {

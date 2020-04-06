@@ -8,7 +8,7 @@ describe('MySQLClient', () => {
   beforeAll(async () => {
     const mySqlServer = new MySQLServer({ mysqlBaseDir: 'mysql-context' })
     mySqlClient = new MySQLClient({ port: await mySqlServer.getListenPort() })
-  })
+  }, 15000)
 
   afterEach(async () => {
     await mySqlClient?.cleanup()

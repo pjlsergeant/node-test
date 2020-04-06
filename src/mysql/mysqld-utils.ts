@@ -8,8 +8,6 @@ import { isFileNotFoundError } from '../unix/errors'
 
 const fsExistsAsync = util.promisify(fs.exists)
 const readFileAsync = util.promisify(fs.readFile)
-const chmodAsync = util.promisify(fs.chmod)
-const mkdirAsync = util.promisify(fs.mkdir)
 
 export interface MySQLServerConfig {
   [key: string]: { [key: string]: string }
@@ -101,10 +99,6 @@ export function generateMySQLServerConfig(
 }
 
 export async function initializeMySQLData(mysqldPath: string, mysqlBaseDir: string): Promise<void> {
-  // Make sure mysqlBaseDir exists and has the right permissions, /files is used for LOAD
-  await mkdirAsync(path.join(mysqlBaseDir, '/files'), { recursive: true, mode: 0o777 })
-  await chmodAsync(mysqlBaseDir, '777')
-
   // Initialize mysql data
   const mysqlInitArgs = [
     `--defaults-file=${mysqlBaseDir}/my.cnf`,
@@ -127,6 +121,38 @@ export async function initializeMySQLData(mysqldPath: string, mysqlBaseDir: stri
   const exitInfo = await cmd.waitForExit()
   if (exitInfo.code !== 0) {
     throw new Error(`Failed to initialize ${mysqldPath}: ${initializeLog}`)
+  }
+}
+
+export async function extractMySQLDataCache(mysqlBaseDir: string, initializeDataTarGz: string): Promise<void> {
+  const cmd = new RunProcess('tar', ['-xzf', initializeDataTarGz], {
+    cwd: path.resolve(mysqlBaseDir)
+  })
+  cmd.stdin?.end()
+  const data: Buffer[] = []
+  cmd.stdout?.on('data', chunk => data.push(chunk))
+  cmd.stderr?.on('data', chunk => data.push(chunk))
+  await cmd.waitForStarted()
+  const exitInfo = await cmd.waitForExit()
+  if (exitInfo.code !== 0) {
+    const output = Buffer.concat(data).toString('utf8')
+    throw new Error(`Failed to extract cached initialize data ${initializeDataTarGz} to ${mysqlBaseDir}\n${output}`)
+  }
+}
+
+export async function createMySQLDataCache(mysqlBaseDir: string, initializeDataTarGz: string): Promise<void> {
+  const cmd = new RunProcess('tar', ['-czf', initializeDataTarGz, 'data'], {
+    cwd: path.resolve(mysqlBaseDir)
+  })
+  cmd.stdin?.end()
+  const data: Buffer[] = []
+  cmd.stdout?.on('data', chunk => data.push(chunk))
+  cmd.stderr?.on('data', chunk => data.push(chunk))
+  await cmd.waitForStarted()
+  const exitInfo = await cmd.waitForExit()
+  if (exitInfo.code !== 0) {
+    const output = Buffer.concat(data).toString('utf8')
+    throw new Error(`Failed to extract cached initialize data ${initializeDataTarGz} to ${mysqlBaseDir}\n${output}`)
   }
 }
 

@@ -27,10 +27,10 @@ export class RunProcess {
   private errorListeners: Array<(err: Error) => void> = []
   private exitListeners: Array<(code: number | null, signal: NodeJS.Signals | null) => void> = []
 
-  public constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
+  public constructor(command: string, args: string[] = [], options?: Parameters<typeof spawn>[2]) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
-    this.cmd = spawn(command, args || [], options)
+    this.cmd = spawn(command, args, options)
     this.detached = options.detached ? options.detached : false
     if (this.cmd.pid) {
       // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS

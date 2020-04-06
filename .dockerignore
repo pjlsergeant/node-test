@@ -2,3 +2,5 @@
 /.vscode
 /build
 /.git
+/mysql-context
+/cache
