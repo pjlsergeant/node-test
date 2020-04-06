@@ -86,9 +86,6 @@ describe('run-wrapper', () => {
 
   it(`should start a process that logs to file`, async () => {
     await commandEmulation.registerCommand('my-hello', () => {
-      setTimeout(() => {
-        // Make sure the process keeps running
-      }, 10000)
       console.log('hello world')
       console.error('stderr')
     })
@@ -103,7 +100,7 @@ describe('run-wrapper', () => {
     processCleanup.push(cmd)
 
     await expect(cmd.waitForOutput(/hello world/)).resolves.toMatchObject({ 0: 'hello world' })
-    await expect(cmd.stop()).resolves.toEqual({ code: 0, signal: null })
+    await expect(cmd.waitForExit()).resolves.toEqual({ code: 0, signal: null })
 
     const stdoutData = (await fsReadFile(`${tmpdir}/stdout.log`)).toString('utf8')
     expect(stdoutData).toEqual('hello world\n')
