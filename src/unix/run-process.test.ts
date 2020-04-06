@@ -4,6 +4,7 @@ import { CommandEmulation } from './command-emulation'
 import { isPidRunning } from './process'
 import {
   createNamedPipe,
+  deleteNamedPipe,
   ProcessNotRunningError,
   RunProcess,
   StandardStreamsStillOpenError,
@@ -206,58 +207,67 @@ describe('run-process', () => {
   })
 
   describe('exec processes', () => {
-    it('should be written', () => {
-      expect(true).toEqual(true)
+    it('should run a bash script (which is exec to not create an extra layered sub process)', async done => {
+      const endTxtLocation = '/tmp/test-exec.txt'
+
+      expect(fs.existsSync(endTxtLocation)).toEqual(false)
+      await new RunProcess('./src/bin/test-exec.sh', [], undefined, true).waitForExit()
+      expect(fs.existsSync(endTxtLocation)).toEqual(true)
+      fs.unlinkSync(endTxtLocation)
+      done()
     })
   })
 
   describe('named pipe', () => {
-    it('should run a process which uses named pipes (fifo)', async () => {
+    it('should show isolated watch process works and exits (make sure some handling works under the hood)', async done => {
+      const cmd = new RunProcess('watch', ['echo', 'keepitgoing'], { stdio: 'ignore' })
+      await cmd.stop()
+      await cmd.waitForExit()
+      done()
+    }, 5000)
+
+    it('should run a process which uses named pipes (fifo)', async done => {
       const pipeLocation = '/tmp/testpipe1'
       // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
-      const cmd = new RunProcess('watch', ['echo 85'], { shell: true }, false, pipeLocation)
+      const cmd = new RunProcess(
+        'watch',
+        ['echo', 'keepitgoing'],
+        // { stdio: 'ignore' } is needed for for the parent process to exit, otherwise it hangs and we get a PIPEWRAP error
+        { stdio: 'ignore' },
+        false,
+        pipeLocation
+      )
 
       await createNamedPipe(pipeLocation)
       await cmd.setupNamedPipeServer()
+
       await cmd.writeToNamedPipe('suttekarl')
       await cmd.waitForNamedPipeOutput(new RegExp('suttekarl'))
-      // await cmd.stop(0)
-      fs.unlinkSync(pipeLocation)
-      await cmd.stop()
       expect(cmd.namedPipe?.outDataStr).toEqual('suttekarl\n')
-    }, 12000)
 
-    it.only('fuck lort', async () => {
-      const pipeLocation = '/tmp/testpipe1'
-      // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
+      await cmd.stop()
+      await expect(cmd.waitForExit()).resolves.toEqual({ code: 0, signal: null })
+      deleteNamedPipe(pipeLocation)
+      done() // it waits for something? (this shouldn't be needed?)
+    }, 4000)
 
-      // TODO: any process run which exits manually, (or even not? watch does not exit) gets PIPEWRAP & PROCESSWRAP errors with open handles in jest
-      const cmd = new RunProcess('watch', ['echo', '85']).waitForExit()
-
-      // await createNamedPipe(pipeLocation)
-      // await cmd.setupNamedPipeServer()
-      // await cmd.writeToNamedPipe('suttekarl')
-      // await cmd.waitForNamedPipeOutput(new RegExp('suttekarl'))
-      // await cmd.stop(0)
-      // fs.unlinkSync(pipeLocation)
-      // await cmd.stop()
-      expect(true).toEqual(true)
-    }, 2000)
-
-    it('should run a process which uses named pipes (fifo), but never find the output', async () => {
+    it('should run a process which uses named pipes (fifo), but never find the output', async done => {
       const pipeLocation = '/tmp/testpipe2'
       // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
-      const cmd = new RunProcess('watch', ['echo hello'], { shell: true }, false, '/tmp/testpipe2')
+      const cmd = new RunProcess('watch', ['echo', 'hello'], { stdio: 'ignore' }, false, '/tmp/testpipe2')
 
       await createNamedPipe(pipeLocation)
       await cmd.setupNamedPipeServer()
-      await cmd.writeToNamedPipe('suttekarl1')
-      await cmd.waitForNamedPipeOutput(new RegExp('suttekarl2'), 500).catch(e => {
-        // Shitty check?
-        expect(e.stack.slice(0, 6)).toEqual('Error:')
-      })
 
-      fs.unlinkSync(pipeLocation)
-    }, 2000)
+      await cmd.writeToNamedPipe('suttekarl1')
+      await expect(cmd.waitForNamedPipeOutput(new RegExp('suttekarl2'), 500)).rejects.toThrow(
+        'Timeout waiting for named pipe output'
+      )
+
+      await cmd.stop()
+      await expect(cmd.waitForExit()).resolves.toEqual({ code: 0, signal: null })
+      deleteNamedPipe(pipeLocation)
+      done()
+    }, 10000)
   })
 })

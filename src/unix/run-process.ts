@@ -15,7 +15,7 @@ export class NoNamedPipeError extends Error {}
 
 export interface NamedPipe {
   location: string
-  listener: net.Socket | undefined
+  server: net.Socket | undefined
   outData: Array<Buffer>
   outDataStr: string
 }
@@ -54,7 +54,8 @@ export class RunProcess {
     options = { env: process.env, ...options }
 
     // Exec or spawn command
-    shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
+    // shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
+    this.cmd = spawn(command, args || [], options)
     this.isExec = shouldExec
     this.detached = options.detached ? options.detached : false
 
@@ -134,9 +135,9 @@ export class RunProcess {
             reject(err)
           }
           if (isNamedPipe(this.namedPipe)) {
-            this.namedPipe.listener = new net.Socket({ fd })
+            this.namedPipe.server = new net.Socket({ fd })
 
-            this.namedPipe.listener.on('data', chunk => {
+            this.namedPipe.server.on('data', chunk => {
               if (this.namedPipe !== undefined) {
                 this.namedPipe.outData.push(chunk)
                 this.namedPipe.outDataStr += chunk.toString('utf8')
@@ -148,7 +149,9 @@ export class RunProcess {
           resolve()
         })
       } else {
-        throw new NoNamedPipeError('No named pipe set, when setting up the listener')
+        throw new NoNamedPipeError(
+          `No named pipe set, when setting up the listener, (remember to give parameters with RunProcess)`
+        )
       }
     })
   }
@@ -164,21 +167,37 @@ export class RunProcess {
   public async waitForNamedPipeOutput(regex: RegExp, timeout = 0): Promise<RegExpMatchArray> {
     return await new Promise((resolve, reject) => {
       let timeoutHandle: NodeJS.Timeout | null = null
+      let outputMatcherInterval: NodeJS.Timeout | null = null
+
       if (timeout) {
-        timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
+        timeoutHandle = setTimeout(() => {
+          if (outputMatcherInterval !== null) {
+            clearInterval(outputMatcherInterval)
+          }
+          reject(new TimeoutError('Timeout waiting for named pipe output'))
+        }, timeout)
       }
 
-      // Check for input every 100 ms
-      setInterval(() => {
+      // Check for input every 100 ms, remember to clear timeouts/intervals (to avoid hanging)
+      outputMatcherInterval = setInterval(() => {
         if (isNamedPipe(this.namedPipe)) {
           const match = this.namedPipe.outDataStr.match(regex)
           if (match) {
             if (timeoutHandle) {
               clearTimeout(timeoutHandle)
             }
+            if (outputMatcherInterval !== null) {
+              clearInterval(outputMatcherInterval)
+            }
             resolve(match)
           }
         } else {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle)
+          }
+          if (outputMatcherInterval !== null) {
+            clearInterval(outputMatcherInterval)
+          }
           reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
         }
       }, 100)
@@ -199,14 +218,15 @@ export class RunProcess {
 
   public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
     this.stopReason = error || null
-    if (this.running) {
-      // Close named pipe stuff
-      if (isNamedPipe(this.namedPipe)) {
-        this.namedPipe.listener?.removeAllListeners()
-        this.namedPipe.listener?.end()
-      }
 
-      this.cmd.kill('SIGTERM')
+    // Close named pipe stuff
+    if (isNamedPipe(this.namedPipe)) {
+      this.namedPipe.server?.removeAllListeners()
+      this.namedPipe.server?.destroy()
+    }
+
+    if (this.running) {
+      this.kill('SIGTERM')
       if (sigKillTimeout) {
         if (await waitFor(this.stopPromise, sigKillTimeout)) {
           return await this.stopPromise
@@ -367,4 +387,8 @@ export class RunProcess {
 // Create named pipe manually, since we will have problems in the constructor/order stuff happens. In real examples the pipe needs to exist before the process is run anyway.
 export async function createNamedPipe(pipeLocation: string): Promise<void> {
   await new RunProcess('mkfifo', [pipeLocation]).waitForExit()
+}
+
+export function deleteNamedPipe(pipeLocation: string): void {
+  fs.unlinkSync(pipeLocation)
 }
