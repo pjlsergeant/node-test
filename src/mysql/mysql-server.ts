@@ -9,7 +9,15 @@ const existsAsync = util.promisify(fs.exists)
 const chmodAsync = util.promisify(fs.chmod)
 
 import { findFreePort } from '../net'
-import { createTempDirectory, isDockerOverlay2, isPidRunning, readPidFile, stopPid, touchFiles } from '../unix'
+import {
+  createTempDirectory,
+  isDockerOverlay2,
+  isPidRunning,
+  readPidFile,
+  stopPid,
+  touchFiles,
+  writePidFile
+} from '../unix'
 import {
   createMySQLDataCache,
   extractMySQLDataCache,
@@ -91,9 +99,12 @@ export class MySQLServer {
     if (this.options.mysqlBaseDir) {
       // TODO: Drop mysqlBaseDir if the version of configuration has changed.
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
+      // Do simple locking to avoid race condition on startup from existing folder
+      await writePidFile(path.join(this.mysqlBaseDir, 'starting.pid'), 100)
 
       // Check if the mysqld is already running from this folder
-      const pid = await readPidFile(`${path.join(this.mysqlBaseDir, '/data/mysqld.local.pid')}`)
+      const mysqldPidFile = path.join(this.mysqlBaseDir, '/data/mysqld.local.pid')
+      const pid = await readPidFile(mysqldPidFile)
       if (pid && (await isPidRunning(pid))) {
         const listenPort = await readPortFile(path.join(this.mysqlBaseDir, '/data/mysqld.port'))
         if (listenPort) {
