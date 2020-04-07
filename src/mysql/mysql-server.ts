@@ -17,7 +17,7 @@ import {
   readPidFile,
   stopPid,
   touchFiles,
-  writePidFile,
+  writePidFile
 } from '../unix'
 import {
   createMySQLDataCache,
@@ -27,7 +27,7 @@ import {
   initializeMySQLData,
   MySQLServerConfig,
   readPortFile,
-  startMySQLd,
+  startMySQLd
 } from './mysqld-utils'
 
 export interface MySQLServerOptions {
@@ -76,7 +76,7 @@ export class MySQLServer {
     return this.initStatus
   }
 
-  public async kill(sigKillTimeout = 3000): Promise<void> {
+  public async kill(sigKillTimeout = 5000): Promise<void> {
     await this.initPromise // Make sure init has finished
     await stopPid(this.mysqldPid, sigKillTimeout)
   }
