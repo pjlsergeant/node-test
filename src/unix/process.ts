@@ -46,7 +46,7 @@ export async function stopPid(pid: number, sigKillTimeout = 3000): Promise<void>
     }
   }
   // Send SIGKILL because we overstayed the deadline
-  process.kill(pid, 'SIGKIll')
+  process.kill(pid, 'SIGKILL')
   deadline = Date.now() + 1000
   while (await isPidRunning(pid)) {
     await new Promise(resolve => setTimeout(resolve, 100))
