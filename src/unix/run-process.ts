@@ -54,8 +54,8 @@ export class RunProcess {
     options = { env: process.env, ...options }
 
     // Exec or spawn command
-    // shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
-    this.cmd = spawn(command, args || [], options)
+    shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
+    // this.cmd = spawn(command, args || [], options)
     this.isExec = shouldExec
     this.detached = options.detached ? options.detached : false
 
@@ -234,7 +234,7 @@ export class RunProcess {
         this.cmd.kill('SIGKILL')
       }
     } else if (!this.stopped) {
-      throw new StandardStreamsStillOpenError('Process exited but standard steams are still open')
+      throw new StandardStreamsStillOpenError('Process exitted but standard steams are still open')
     }
 
     return await this.stopPromise
