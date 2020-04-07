@@ -392,6 +392,18 @@ export class RunProcess {
       })
     })
   }
+
+  /**
+   * When searching for specific stuff with waitForNamedPipeOutput(), it might be nice to wait for a specific case -> clear the data.
+   */
+  public clearNamedPipeOutDataStr(): void {
+    if (this.namedPipe === undefined || this.namedPipe.server === undefined) {
+      throw new NoNamedPipeError(
+        `Can't clear named pipe output, when it isn't setup! (Did you forget to call setupNamedPipeServer()?)`
+      )
+    }
+    this.namedPipe.outDataStr = ''
+  }
 }
 
 /**
