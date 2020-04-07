@@ -13,7 +13,7 @@ USER builder
 # Copy application code.
 COPY --chown=builder:builder . /app
 
-RUN npm ci
+RUN npm install
 
 RUN npm test
 
