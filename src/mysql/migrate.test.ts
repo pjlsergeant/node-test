@@ -23,8 +23,8 @@ describe('Migrate', () => {
   it('Query test', async () => {
     const migrate = new Migrate({ mysqlClient: mySqlClient, migrationsDir: 'src/mysql/resources/migrations' })
     await migrate.cleanup()
-    await time(migrate.run('2020-04-02T165700'))
-
+    const [migrationResultBefore, timingBefore] = await time(migrate.migrate('2020-04-02T165700'))
+    console.log(timingBefore / 1000)
     const pool = await mySqlClient.getConnectionPool('my_test01')
     const columnsBefore = await mySqlClient.queryArray<string>(
       pool,
@@ -34,9 +34,11 @@ describe('Migrate', () => {
         WHERE TABLE_SCHEMA ='my_test01' AND TABLE_NAME='VehicleInfo';
       `
     )
-    expect(columnsBefore).toMatchObject(['id', 'vin', 'vendor', 'make', 'name', 'year', 'createdAt', 'updatedAt'])
+    expect(columnsBefore).toMatchSnapshot()
+    expect(migrationResultBefore).toMatchSnapshot()
 
-    await migrate.run()
+    const [migrationResultAfter, timingAfter] = await time(migrate.migrate('2020-04-02T165700'))
+    console.log(timingAfter / 1000)
     const columnsAfter = await mySqlClient.queryArray<string>(
       pool,
       `
@@ -45,16 +47,7 @@ describe('Migrate', () => {
         WHERE TABLE_SCHEMA ='my_test01' AND TABLE_NAME='VehicleInfo';
       `
     )
-    expect(columnsAfter).toMatchObject([
-      'id',
-      'vin',
-      'vendor',
-      'make',
-      'name',
-      'model',
-      'year',
-      'createdAt',
-      'updatedAt'
-    ])
+    expect(columnsAfter).toMatchSnapshot()
+    expect(migrationResultAfter).toMatchSnapshot()
   })
 })

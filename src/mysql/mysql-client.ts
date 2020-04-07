@@ -35,7 +35,6 @@ export class MySQLClient {
   }
 
   public async query<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T[]> {
-    console.log(sql)
     return new Promise((resolve, reject) => {
       pool.query(sql, values, (error, results) => {
         if (error) {

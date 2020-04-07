@@ -1,0 +1,144 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Migrate Query test 1`] = `
+Array [
+  "id",
+  "vin",
+  "vendor",
+  "make",
+  "name",
+  "year",
+  "createdAt",
+  "updatedAt",
+]
+`;
+
+exports[`Migrate Query test 2`] = `
+Object {
+  "test": Object {
+    "my_test01": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+      },
+    ],
+    "my_test02": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+      },
+    ],
+    "my_test03": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+      },
+    ],
+  },
+}
+`;
+
+exports[`Migrate Query test 3`] = `
+Array [
+  "id",
+  "vin",
+  "vendor",
+  "make",
+  "name",
+  "model",
+  "year",
+  "createdAt",
+  "updatedAt",
+]
+`;
+
+exports[`Migrate Query test 4`] = `
+Object {
+  "test": Object {
+    "my_test01": Array [
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+      },
+    ],
+    "my_test02": Array [
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+      },
+    ],
+    "my_test03": Array [
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+      },
+    ],
+  },
+}
+`;
