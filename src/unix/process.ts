@@ -67,7 +67,9 @@ export async function writePidFile(pidFile: string, acquireTries = 10): Promise<
       if (pid && (await isPidRunning(pid))) {
         await new Promise(resolve => setTimeout(resolve, 100))
       } else {
-        await fsUnlinkAsync(pidFile).catch()
+        await fsUnlinkAsync(pidFile).catch(() => {
+          /* Ignore */
+        })
       }
     }
   }

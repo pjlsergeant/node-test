@@ -172,7 +172,9 @@ export class MySQLServer {
     await writeFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`, this.listenPort)
     this.initStatus = initialized ? 'initialized' : 'started'
     if (startingPidFile) {
-      await unlinkAsync(startingPidFile).catch()
+      await unlinkAsync(startingPidFile).catch(() => {
+        /* Ignore */
+      })
     }
   }
 }
