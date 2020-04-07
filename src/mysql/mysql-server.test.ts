@@ -38,7 +38,7 @@ describe('MySQLServer startup', () => {
       connection?.end()
       await mySqlServer?.kill()
     }
-  }, 10000)
+  }, 20000)
 
   it('Should start a new database server from pre created data and resume it after', async () => {
     let mySqlServer: MySQLServer | null = null
@@ -62,5 +62,5 @@ describe('MySQLServer startup', () => {
       connection?.end()
       await mySqlServer?.kill()
     }
-  }, 15000)
+  }, 20000)
 })
