@@ -1,7 +1,6 @@
 import { Migrate } from './migrate'
 import { MySQLClient } from './mysql-client'
 import { MySQLServer } from './mysql-server'
-import { dumpDatabase } from './mysqld-utils'
 
 async function time<T>(promise: Promise<T>): Promise<[T, number]> {
   const start = process.hrtime()
@@ -84,7 +83,5 @@ describe('Migrate', () => {
     await migrate.cleanup()
     const [migrationResult, timingBefore] = await time(migrate.migrate())
     console.log(timingBefore / 1000)
-    //expect(migrationResult).toMatchSnapshot()
-    //await migrate.cacheSchemas()
   }, 60_000)
 })

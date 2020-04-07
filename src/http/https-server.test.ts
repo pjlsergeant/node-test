@@ -7,7 +7,6 @@ export type TestHttpsServerOptions = HttpsServerOptions
 
 class TestHttpsServer extends HttpsServer {
   public constructor(options: TestHttpsServerOptions = {}) {
-
     super(options, (req, res) => {
       // Map the responses
       switch (req.url) {
