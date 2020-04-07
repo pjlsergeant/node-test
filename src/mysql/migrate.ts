@@ -3,9 +3,12 @@ import mysql from 'mysql'
 import util from 'util'
 
 import { MySQLClient } from './mysql-client'
+import { dumpDatabase } from './mysqld-utils'
 
 const readdir = util.promisify(fs.readdir)
 const readFile = util.promisify(fs.readFile)
+const mkdirAsync = util.promisify(fs.mkdir)
+const existsAsync = util.promisify(fs.exists)
 
 interface MigrationRow {
   timestamp: string
@@ -20,30 +23,35 @@ interface Migration {
 }
 
 export interface MigrationResult {
-  [schema: string]: {
-    [database: string]: Migration[]
-  }
+  [schema: string]: SchemaMigrationResult
+}
+
+export interface SchemaMigrationResult {
+  [database: string]: Migration[]
 }
 
 export interface MigrateOptions {
   mysqlClient: MySQLClient
   migrationsDir?: string
-  cacheDir?: string
+  cachePath?: string
+  ignoreCache?: boolean
 }
 
 export class Migrate {
   private mysqlClient: MySQLClient
   private migrationsDir: string
-  private cacheDir: string
+  private cachePath: string
   private initPromise: Promise<void>
   private schemaFolders!: string[]
   private databaseMap!: { [key: string]: string[] }
   private basePool!: mysql.Pool
+  private ignoreCache: boolean
 
   public constructor(options: MigrateOptions) {
     this.mysqlClient = options.mysqlClient
     this.migrationsDir = options.migrationsDir || './migrations'
-    this.cacheDir = options.cacheDir || './cache'
+    this.cachePath = options.cachePath || './cache'
+    this.ignoreCache = options.ignoreCache || false
     this.initPromise = this.init()
     this.initPromise.catch(() => {
       // Ignore so we don't et unhandled promise rejection
@@ -70,23 +78,54 @@ export class Migrate {
     }
   }
 
+  public async cacheSchemas(): Promise<void> {
+    await mkdirAsync(this.cachePath, { recursive: true, mode: 0o777 })
+    for (const schemaFolder of this.schemaFolders) {
+      await dumpDatabase(
+        this.mysqlClient.options.port || 0, // TODO: Make this a lot prettier
+        this.databaseMap[schemaFolder],
+        `${this.cachePath}/${schemaFolder}.sql`
+      )
+    }
+  }
+
   public async migrate(until?: string): Promise<MigrationResult> {
     await this.initPromise
     const result: MigrationResult = {}
+    const promises: Array<Promise<SchemaMigrationResult>> = []
     for (const schemaFolder of this.schemaFolders) {
-      result[schemaFolder] = {}
-      const migrations = await this.readMigrations(`${this.migrationsDir}/${schemaFolder}`)
+      promises.push(this.migrateSchema(schemaFolder, until))
+    }
+    const migrations = await Promise.all(promises)
 
-      const promises: Array<Promise<Migration[]>> = []
-      for (const database of this.databaseMap[schemaFolder]) {
-        result[schemaFolder][database] = []
-        promises.push(this.migrateDatabase(database, migrations, until))
-      }
+    // Populate the MigrationResult structure
+    for (const schemaFolder of this.schemaFolders) {
+      result[schemaFolder] = migrations.shift() || {}
+    }
+    return result
+  }
 
-      const dbMigrations = await Promise.all(promises)
-      for (const database of this.databaseMap[schemaFolder]) {
-        result[schemaFolder][database] = dbMigrations.shift() || []
+  public async migrateSchema(schemaFolder: string, until?: string): Promise<SchemaMigrationResult> {
+    const cacheFile = `${this.cachePath}/${schemaFolder}.sql`
+    if (!this.ignoreCache && (await existsAsync(cacheFile))) {
+      try {
+        const contents = await readFile(cacheFile, 'utf8')
+        await this.mysqlClient.query(this.basePool, contents)
+      } catch (e) {
+        throw new Error(`Failed applying cache file ${cacheFile}: ${e}`)
       }
+    }
+    const result: SchemaMigrationResult = {}
+    const migrations = await this.readMigrations(schemaFolder)
+    const promises: Array<Promise<Migration[]>> = []
+    for (const database of this.databaseMap[schemaFolder]) {
+      promises.push(this.migrateDatabase(database, migrations, until))
+    }
+    const dbMigrations = await Promise.all(promises)
+
+    // Populate the SchemaMigrationResult structure
+    for (const database of this.databaseMap[schemaFolder]) {
+      result[database] = dbMigrations.shift() || []
     }
     return result
   }
@@ -106,7 +145,6 @@ export class Migrate {
         );
       `
     )
-    // TODO: Restore cache if it exists and no data exists
 
     const pool = await this.mysqlClient.getConnectionPool(database)
 
@@ -139,7 +177,7 @@ export class Migrate {
   }
 
   public async readMigrations(schemaPath: string): Promise<Migration[]> {
-    const migrationsFiles = (await readdir(schemaPath)).sort()
+    const migrationsFiles = (await readdir(`${this.migrationsDir}/${schemaPath}`)).sort()
     const promises: Promise<Migration>[] = []
     for (const migrationFile of migrationsFiles) {
       promises.push(this.readMigration(`${schemaPath}/${migrationFile}`))
@@ -152,7 +190,7 @@ export class Migrate {
     if (!match) {
       throw new Error(`Migration file does not follow format: ${migrationFile}`)
     }
-    const contents = await readFile(migrationFile, 'utf8')
+    const contents = await readFile(`${this.migrationsDir}/${migrationFile}`, 'utf8')
     const sql = contents.split(/\nEXIT/im).shift()
     if (!sql) {
       throw new Error(`Empty migration`)

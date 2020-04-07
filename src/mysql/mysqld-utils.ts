@@ -156,6 +156,27 @@ export async function createMySQLDataCache(mysqlBaseDir: string, initializeDataT
   }
 }
 
+export async function dumpDatabase(port: number, databases: string[], dumpFile: string): Promise<void> {
+  const cmd = new RunProcess('mysqldump', [
+    '--host=127.0.0.1',
+    `--port=${port}`,
+    '--user=root',
+    '--databases',
+    ...databases
+  ])
+  cmd.stdin?.end()
+  const data: Buffer[] = []
+  cmd.stderr?.on('data', chunk => data.push(chunk))
+  const dumpFileStream = fs.createWriteStream(dumpFile)
+  cmd.stdout?.pipe(dumpFileStream)
+  await cmd.waitForStarted()
+  const exitInfo = await cmd.waitForExit()
+  if (exitInfo.code !== 0) {
+    const output = Buffer.concat(data).toString('utf8')
+    throw new Error(`Failed to dump ${databases.join(', ')} to ${dumpFile}\n${output}`)
+  }
+}
+
 export async function startMySQLd(
   mysqldPath: string,
   mysqlBaseDir: string,

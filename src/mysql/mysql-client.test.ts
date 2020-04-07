@@ -19,6 +19,6 @@ describe('MySQLClient', () => {
     const pool = await mySqlClient.createDatabaseCopy('mysql') // copy time 0s 428.431469ms
     console.log(formatHrDiff('copy time', process.hrtime(copyTime)))
     const users = await mySqlClient.query<{ user: string }>(pool, `SELECT CONCAT(user, '@', host) AS user FROM user;`)
-    console.log(users)
+    expect(users.length).toBeGreaterThan(0)
   })
 })

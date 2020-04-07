@@ -4,8 +4,8 @@ import mysql from 'mysql'
 export type MySQLClientOptions = mysql.PoolConfig
 
 export class MySQLClient {
+  public options: MySQLClientOptions
   private databasePools: { [key: string]: mysql.Pool } = {}
-  private options: MySQLClientOptions
 
   public constructor(options: MySQLClientOptions = {}) {
     this.options = {

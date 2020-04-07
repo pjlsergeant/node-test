@@ -1,6 +1,119 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Migrate Query test 1`] = `
+exports[`Migrate should migrate schema creating cache and use this to restore state when migrating again 1`] = `
+Object {
+  "test": Object {
+    "my_test01": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "2020-04-02T165700",
+      },
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "2020-04-02T170100",
+      },
+    ],
+    "my_test02": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "2020-04-02T165700",
+      },
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "2020-04-02T170100",
+      },
+    ],
+    "my_test03": Array [
+      Object {
+        "name": "vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "sql": "CREATE TABLE \`VehicleInfo\` (
+    \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    \`vin\` VARCHAR(17) NOT NULL,
+    \`vendor\` VARCHAR(255) NOT NULL, -- VAG
+    \`make\` VARCHAR(255) NOT NULL, -- Audi
+    \`name\` VARCHAR(255) NOT NULL, -- Audi Q2 Sport
+    \`year\` YEAR(4) NOT NULL, -- 2018
+
+    \`createdAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    \`updatedAt\` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`vin\` (\`vin\`)
+)
+ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
+COMMENT 'Basic vehicle information'
+;
+",
+        "timestamp": "2020-04-02T165700",
+      },
+      Object {
+        "name": "vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
+",
+        "timestamp": "2020-04-02T170100",
+      },
+    ],
+  },
+}
+`;
+
+exports[`Migrate should migrate schema creating cache and use this to restore state when migrating again 2`] = `
+Object {
+  "test": Object {
+    "my_test01": Array [],
+    "my_test02": Array [],
+    "my_test03": Array [],
+  },
+}
+`;
+
+exports[`Migrate should migrate schema over two migration runs 1`] = `
 Array [
   "id",
   "vin",
@@ -13,13 +126,13 @@ Array [
 ]
 `;
 
-exports[`Migrate Query test 2`] = `
+exports[`Migrate should migrate schema over two migration runs 2`] = `
 Object {
   "test": Object {
     "my_test01": Array [
       Object {
         "name": "vehicle-info_add_table.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
         "sql": "CREATE TABLE \`VehicleInfo\` (
     \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
     \`vin\` VARCHAR(17) NOT NULL,
@@ -38,13 +151,13 @@ ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
 COMMENT 'Basic vehicle information'
 ;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+        "timestamp": "2020-04-02T165700",
       },
     ],
     "my_test02": Array [
       Object {
         "name": "vehicle-info_add_table.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
         "sql": "CREATE TABLE \`VehicleInfo\` (
     \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
     \`vin\` VARCHAR(17) NOT NULL,
@@ -63,13 +176,13 @@ ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
 COMMENT 'Basic vehicle information'
 ;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+        "timestamp": "2020-04-02T165700",
       },
     ],
     "my_test03": Array [
       Object {
         "name": "vehicle-info_add_table.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T165700_vehicle-info_add_table.sql",
+        "path": "test/2020-04-02T165700_vehicle-info_add_table.sql",
         "sql": "CREATE TABLE \`VehicleInfo\` (
     \`id\` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
     \`vin\` VARCHAR(17) NOT NULL,
@@ -88,14 +201,14 @@ ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4
 COMMENT 'Basic vehicle information'
 ;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T165700",
+        "timestamp": "2020-04-02T165700",
       },
     ],
   },
 }
 `;
 
-exports[`Migrate Query test 3`] = `
+exports[`Migrate should migrate schema over two migration runs 3`] = `
 Array [
   "id",
   "vin",
@@ -109,34 +222,34 @@ Array [
 ]
 `;
 
-exports[`Migrate Query test 4`] = `
+exports[`Migrate should migrate schema over two migration runs 4`] = `
 Object {
   "test": Object {
     "my_test01": Array [
       Object {
         "name": "vehicle-info_allow_null.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
         "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+        "timestamp": "2020-04-02T170100",
       },
     ],
     "my_test02": Array [
       Object {
         "name": "vehicle-info_allow_null.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
         "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+        "timestamp": "2020-04-02T170100",
       },
     ],
     "my_test03": Array [
       Object {
         "name": "vehicle-info_allow_null.sql",
-        "path": "src/mysql/resources/migrations/test/2020-04-02T170100_vehicle-info_allow_null.sql",
+        "path": "test/2020-04-02T170100_vehicle-info_allow_null.sql",
         "sql": "ALTER TABLE \`VehicleInfo\` ADD \`model\` VARCHAR(255) NULL AFTER \`name\`;
 ",
-        "timestamp": "mysql/resources/migrations/test/2020-04-02T170100",
+        "timestamp": "2020-04-02T170100",
       },
     ],
   },
