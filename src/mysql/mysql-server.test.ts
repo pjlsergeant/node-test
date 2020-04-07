@@ -62,5 +62,5 @@ describe('MySQLServer startup', () => {
       connection?.end()
       await mySqlServer?.kill()
     }
-  }, 10000)
+  }, 15000)
 })

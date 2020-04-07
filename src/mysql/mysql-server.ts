@@ -7,6 +7,7 @@ const writeFileAsync = util.promisify(fs.writeFile)
 const mkdirAsync = util.promisify(fs.mkdir)
 const existsAsync = util.promisify(fs.exists)
 const chmodAsync = util.promisify(fs.chmod)
+const unlinkAsync = util.promisify(fs.unlink)
 
 import { findFreePort } from '../net'
 import {
@@ -16,7 +17,7 @@ import {
   readPidFile,
   stopPid,
   touchFiles,
-  writePidFile
+  writePidFile,
 } from '../unix'
 import {
   createMySQLDataCache,
@@ -26,7 +27,7 @@ import {
   initializeMySQLData,
   MySQLServerConfig,
   readPortFile,
-  startMySQLd
+  startMySQLd,
 } from './mysqld-utils'
 
 export interface MySQLServerOptions {
@@ -96,11 +97,13 @@ export class MySQLServer {
   }
 
   private async init(): Promise<void> {
+    let startingPidFile = ''
     if (this.options.mysqlBaseDir) {
       // TODO: Drop mysqlBaseDir if the version of configuration has changed.
       this.mysqlBaseDir = path.resolve(this.options.mysqlBaseDir)
       // Do simple locking to avoid race condition on startup from existing folder
-      await writePidFile(path.join(this.mysqlBaseDir, 'starting.pid'), 100)
+      startingPidFile = path.join(this.mysqlBaseDir, 'starting.pid')
+      await writePidFile(startingPidFile, 100)
 
       // Check if the mysqld is already running from this folder
       const mysqldPidFile = path.join(this.mysqlBaseDir, '/data/mysqld.local.pid')
@@ -168,5 +171,8 @@ export class MySQLServer {
     this.timings.push(formatHrDiff('startMySQLd', process.hrtime(startTime)))
     await writeFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`, this.listenPort)
     this.initStatus = initialized ? 'initialized' : 'started'
+    if (startingPidFile) {
+      await unlinkAsync(startingPidFile).catch()
+    }
   }
 }
