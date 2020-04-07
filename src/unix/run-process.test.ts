@@ -210,8 +210,7 @@ describe('run-process', () => {
     it('should run a bash script (which is exec to not create an extra layered sub process)', async done => {
       const endTxtLocation = '/tmp/test-exec.txt'
 
-      //TODO: re-add
-      // expect(fs.existsSync(endTxtLocation)).toEqual(false)
+      expect(fs.existsSync(endTxtLocation)).toEqual(false)
       await new RunProcess('./src/bin/test-exec.sh', [], undefined, true).waitForExit()
       expect(fs.existsSync(endTxtLocation)).toEqual(true)
       fs.unlinkSync(endTxtLocation)
@@ -227,18 +226,11 @@ describe('run-process', () => {
       done()
     }, 5000)
 
+    // Testing with in and out, requires a program that actually does that for us... For debugging change this, and run qemu in the background
     it('should run a process which uses named pipes (fifo)', async done => {
       const pipeLocation = '/tmp/testpipe1'
       // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
-      const cmd = new RunProcess(
-        'watch',
-        ['echo', 'keepitgoing'],
-        // { stdio: 'ignore' } is needed for for the parent process to exit, otherwise it hangs and we get a PIPEWRAP error
-        // { stdio: 'ignore', detached: false },
-        undefined,
-        false,
-        pipeLocation
-      )
+      const cmd = new RunProcess('watch', ['echo', 'keepitgoing'], undefined, false, pipeLocation)
 
       await createNamedPipe(pipeLocation)
       await cmd.setupNamedPipeServer()

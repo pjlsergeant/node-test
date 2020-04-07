@@ -18,6 +18,8 @@ export interface NamedPipe {
   server: net.Socket | undefined
   outData: Array<Buffer>
   outDataStr: string
+  isSelfCreatedPipe: boolean
+  isInAndOut: boolean
 }
 
 export function isNamedPipe(x: NamedPipe | undefined): x is NamedPipe {
@@ -48,7 +50,8 @@ export class RunProcess {
     args?: string[],
     options?: Parameters<typeof spawn>[2],
     shouldExec = false,
-    namedPipeLocation?: string
+    namedPipeLocation?: string,
+    namedPipeIsInAndOut = false
   ) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
@@ -66,7 +69,7 @@ export class RunProcess {
         outData: [] as Buffer[],
         outDataStr: '',
         isSelfCreatedPipe: false,
-        listener: undefined
+        isInAndOut: namedPipeIsInAndOut
       } as NamedPipe
     }
 
@@ -121,99 +124,6 @@ export class RunProcess {
       .catch(() => {
         // User might never bind to this promise if they are just starting a process not caring about if it runs on not
       })
-  }
-
-  /**
-   * We can't do async stuff in the constructor, manually call this
-   * https://stackoverflow.com/questions/44982499/read-from-a-named-pipe-fifo-with-node-js/46965930
-   */
-  public async setupNamedPipeServer(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (isNamedPipe(this.namedPipe)) {
-        fs.open(this.namedPipe.location, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, (err, fd) => {
-          if (err) {
-            reject(err)
-          }
-          if (isNamedPipe(this.namedPipe)) {
-            this.namedPipe.server = new net.Socket({ fd })
-
-            this.namedPipe.server.on('data', chunk => {
-              if (this.namedPipe !== undefined) {
-                this.namedPipe.outData.push(chunk)
-                this.namedPipe.outDataStr += chunk.toString('utf8')
-              }
-            })
-          }
-
-          // Resolve when we have set up the events
-          resolve()
-        })
-      } else {
-        throw new NoNamedPipeError(
-          `No named pipe set, when setting up the listener, (remember to give parameters with RunProcess)`
-        )
-      }
-    })
-  }
-
-  public async writeToNamedPipe(input: string): Promise<void> {
-    if (this.namedPipe !== undefined) {
-      await new RunProcess('echo', [`${input} > ${this.namedPipe.location}`], { shell: true }).waitForExit()
-    } else {
-      throw new NoNamedPipeError(`No named pipe set, when writing data: ${input}`)
-    }
-  }
-
-  public async waitForNamedPipeOutput(regex: RegExp, timeout = 0): Promise<RegExpMatchArray> {
-    return await new Promise((resolve, reject) => {
-      let timeoutHandle: NodeJS.Timeout | null = null
-      let outputMatcherInterval: NodeJS.Timeout | null = null
-
-      if (timeout) {
-        timeoutHandle = setTimeout(() => {
-          if (outputMatcherInterval !== null) {
-            clearInterval(outputMatcherInterval)
-          }
-          reject(new TimeoutError('Timeout waiting for named pipe output'))
-        }, timeout)
-      }
-
-      // Check for input every 100 ms, remember to clear timeouts/intervals (to avoid hanging)
-      outputMatcherInterval = setInterval(() => {
-        if (isNamedPipe(this.namedPipe)) {
-          const match = this.namedPipe.outDataStr.match(regex)
-          if (match) {
-            if (timeoutHandle) {
-              clearTimeout(timeoutHandle)
-            }
-            if (outputMatcherInterval !== null) {
-              clearInterval(outputMatcherInterval)
-            }
-            resolve(match)
-          }
-        } else {
-          if (timeoutHandle) {
-            clearTimeout(timeoutHandle)
-          }
-          if (outputMatcherInterval !== null) {
-            clearInterval(outputMatcherInterval)
-          }
-          reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
-        }
-      }, 100)
-
-      // Throw if the process exist before finding the output
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.stopPromise.then(() => {
-        reject(
-          this.stopReason
-            ? this.stopReason
-            : new ExitBeforeOutputMatchError(
-                `Process exitted before regex: ${regex} was found.\nTotal outDataStr:\n${this.namedPipe?.outDataStr}`
-              )
-        )
-      })
-    })
   }
 
   public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {
@@ -382,13 +292,131 @@ export class RunProcess {
     }
     return this.cmd.kill(signal)
   }
+
+  /**
+   * We can't do async stuff in the constructor, manually call this
+   * https://stackoverflow.com/questions/44982499/read-from-a-named-pipe-fifo-with-node-js/46965930
+   */
+  public async setupNamedPipeServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (isNamedPipe(this.namedPipe)) {
+        const location = this.namedPipe?.isInAndOut ? `${this.namedPipe.location}.out` : `${this.namedPipe.location}`
+        fs.open(location, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK, (err, fd) => {
+          if (err) {
+            reject(err)
+          }
+          if (isNamedPipe(this.namedPipe)) {
+            this.namedPipe.server = new net.Socket({ fd })
+
+            this.namedPipe.server.on('data', chunk => {
+              if (this.namedPipe !== undefined) {
+                this.namedPipe.outData.push(chunk)
+                this.namedPipe.outDataStr += chunk.toString('utf8')
+              }
+            })
+          }
+
+          resolve()
+        })
+      } else {
+        throw new NoNamedPipeError(
+          `No named pipe set, when setting up the listener, (remember to give parameters with RunProcess)`
+        )
+      }
+    })
+  }
+
+  public async writeToNamedPipe(input: string): Promise<void> {
+    if (this.namedPipe !== undefined) {
+      const location = this.namedPipe.isInAndOut ? `${this.namedPipe.location}.in` : `${this.namedPipe.location}`
+      await new RunProcess('echo', [`${input} > ${location}`], { shell: true }).waitForExit()
+    } else {
+      throw new NoNamedPipeError(`No named pipe set, when writing data: ${input}`)
+    }
+  }
+
+  // Timeout is amount of time, we max wait
+  public async waitForNamedPipeOutput(regex: RegExp, timeout = 0): Promise<RegExpMatchArray> {
+    // Make sure the setup has been run first
+    if (this.namedPipe?.server === undefined) {
+      throw new NoNamedPipeError(`Can't wait for output, when setupNamedPipeServer() hasn't been called yet!`)
+    }
+
+    return await new Promise((resolve, reject) => {
+      let timeoutHandle: NodeJS.Timeout | null = null
+      let outputMatcherInterval: NodeJS.Timeout | null = null
+
+      if (timeout) {
+        timeoutHandle = setTimeout(() => {
+          if (outputMatcherInterval !== null) {
+            clearInterval(outputMatcherInterval)
+          }
+          reject(new TimeoutError('Timeout waiting for named pipe output'))
+        }, timeout)
+      }
+
+      // Check for input every 100 ms, remember to clear timeouts/intervals (to avoid hanging)
+      outputMatcherInterval = setInterval(() => {
+        if (isNamedPipe(this.namedPipe)) {
+          const match = this.namedPipe.outDataStr.match(regex)
+          if (match) {
+            if (timeoutHandle) {
+              clearTimeout(timeoutHandle)
+            }
+            if (outputMatcherInterval !== null) {
+              clearInterval(outputMatcherInterval)
+            }
+            resolve(match)
+          }
+        } else {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle)
+          }
+          if (outputMatcherInterval !== null) {
+            clearInterval(outputMatcherInterval)
+          }
+          reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
+        }
+      }, 100)
+
+      // Throw if the process exist before finding the output
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.stopPromise.then(() => {
+        reject(
+          this.stopReason
+            ? this.stopReason
+            : new ExitBeforeOutputMatchError(
+                `Process exitted before regex: ${regex} was found.\nTotal outDataStr:\n${this.namedPipe?.outDataStr}`
+              )
+        )
+      })
+    })
+  }
 }
 
-// Create named pipe manually, since we will have problems in the constructor/order stuff happens. In real examples the pipe needs to exist before the process is run anyway.
-export async function createNamedPipe(pipeLocation: string): Promise<void> {
-  await new RunProcess('mkfifo', [pipeLocation]).waitForExit()
+/**
+ * Create named pipe manually, since we will have problems in the constructor/order stuff happens. In real examples the pipe needs to exist before the process is run anyway.
+ * @param pipeLocation the base location/pipename
+ * @param isInAndOut if 2 pipes should be made with .in and .out extensions
+ */
+export async function createNamedPipe(pipeLocation: string, isInAndOut = false): Promise<void> {
+  if (isInAndOut) {
+    await new RunProcess('mkfifo', [`${pipeLocation}.in`, `${pipeLocation}.out`]).waitForExit()
+  } else {
+    await new RunProcess('mkfifo', [pipeLocation]).waitForExit()
+  }
 }
 
-export function deleteNamedPipe(pipeLocation: string): void {
-  fs.unlinkSync(pipeLocation)
+/**
+ * Cleans up named pipe after use
+ * @param pipeLocation the base location/pipename
+ * @param isInAndOut if 2 pipes should be removed with .in and .out extensions
+ */
+export function deleteNamedPipe(pipeLocation: string, isInAndOut = false): void {
+  if (isInAndOut) {
+    fs.unlinkSync(`${pipeLocation}.in`)
+    fs.unlinkSync(`${pipeLocation}.out`)
+  } else {
+    fs.unlinkSync(pipeLocation)
+  }
 }

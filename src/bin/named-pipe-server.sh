@@ -1,4 +1,4 @@
-# for testing / debugging
+# for testing / debugging (does not test .in and .out)
 
 pipe=/tmp/testpipe
 
