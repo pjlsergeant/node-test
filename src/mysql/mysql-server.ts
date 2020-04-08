@@ -36,6 +36,8 @@ export interface MySQLServerOptions {
   mysqldPath?: string
   cachePath?: string
   myCnf?: MySQLServerConfig
+  ignoreCache?: boolean
+  ignoreCustomCache?: boolean
 }
 
 type InitStatus = 'unknown' | 'started' | 'initialized' | 'resumed'
@@ -54,12 +56,18 @@ export class MySQLServer {
   private initPromise: Promise<void>
   private options: MySQLServerOptions
   private cachePath: string
+  private cleanInitializeDataTarGz!: string
+  private customInitializeDataTarGz!: string
+  private ignoreCache: boolean
+  private ignoreCustomCache: boolean
 
   public constructor(options: MySQLServerOptions = {}) {
     this.options = options
     this.mysqldPath = options.mysqldPath || 'mysqld'
     this.cachePath = options.cachePath || './cache'
     this.myCnfCustom = options.myCnf || {}
+    this.ignoreCache = options.ignoreCache || false
+    this.ignoreCustomCache = (options.ignoreCache && options.ignoreCustomCache) || false
     this.initPromise = this.init()
     this.initPromise.catch(() => {
       // Do nothing as we will throw at later calls
@@ -96,7 +104,28 @@ export class MySQLServer {
     return this.mysqlBaseDir
   }
 
+  public async saveAsCustomInitState(): Promise<void> {
+    await this.initPromise // Make sure init has finished
+    await createMySQLDataCache(this.mysqlBaseDir, this.customInitializeDataTarGz)
+  }
+
+  public async waitForStarted(): Promise<void> {
+    await this.initPromise
+  }
+
   private async init(): Promise<void> {
+    // Generate unique cache key based on mysql version
+    const mysqlVersion = await getMySQLServerVersionString(this.mysqldPath)
+    const hash = crypto.createHash('sha1')
+    const cacheCheckSum = hash.update(mysqlVersion).digest('hex') // TODO: Also add calculation for myCnf
+    this.cleanInitializeDataTarGz = path.resolve(
+      path.join(this.cachePath, `clean-initialization-data-${cacheCheckSum}.tar.gz`)
+    )
+    this.customInitializeDataTarGz = path.resolve(
+      path.join(this.cachePath, `custom-initialization-data-${cacheCheckSum}.tar.gz`)
+    )
+
+    // Resume from or create new mysqlBaseDir
     let startingPidFile = ''
     if (this.options.mysqlBaseDir) {
       // TODO: Drop mysqlBaseDir if the version of configuration has changed.
@@ -106,10 +135,10 @@ export class MySQLServer {
       await writePidFile(startingPidFile, 100)
 
       // Check if the mysqld is already running from this folder
-      const mysqldPidFile = path.join(this.mysqlBaseDir, '/data/mysqld.local.pid')
+      const mysqldPidFile = path.join(this.mysqlBaseDir, 'mysqld.pid')
       const pid = await readPidFile(mysqldPidFile)
       if (pid && (await isPidRunning(pid))) {
-        const listenPort = await readPortFile(path.join(this.mysqlBaseDir, '/data/mysqld.port'))
+        const listenPort = await readPortFile(path.join(this.mysqlBaseDir, 'mysqld.port'))
         if (listenPort) {
           this.mysqldPid = pid
           this.listenPort = listenPort
@@ -162,20 +191,16 @@ export class MySQLServer {
       await mkdirAsync(path.join(this.mysqlBaseDir, '/files'), { recursive: true, mode: 0o777 })
       await chmodAsync(path.join(this.mysqlBaseDir, '/files'), '777')
 
-      // Generate unique cache key based on mysql version
-      const mysqlVersion = await getMySQLServerVersionString(this.mysqldPath)
-      const hash = crypto.createHash('sha1')
-      const cacheCheckSum = hash.update(mysqlVersion).digest('hex') // TODO: Also add calculation for myCnf
-      const initializeDataTarGz = path.resolve(path.join(this.cachePath, `initialize-data-${cacheCheckSum}.tar.gz`))
-
       // initialize mysql data folder
       const initializeTime = process.hrtime()
-      if (await existsAsync(initializeDataTarGz)) {
-        await extractMySQLDataCache(this.mysqlBaseDir, initializeDataTarGz)
+      if (!this.ignoreCustomCache && (await existsAsync(this.customInitializeDataTarGz))) {
+        await extractMySQLDataCache(this.mysqlBaseDir, this.customInitializeDataTarGz)
+      } else if (!this.ignoreCache && (await existsAsync(this.cleanInitializeDataTarGz))) {
+        await extractMySQLDataCache(this.mysqlBaseDir, this.cleanInitializeDataTarGz)
       } else {
         await initializeMySQLData(this.mysqldPath, this.mysqlBaseDir)
         await mkdirAsync(this.cachePath, { recursive: true, mode: 0o777 })
-        await createMySQLDataCache(this.mysqlBaseDir, initializeDataTarGz)
+        await createMySQLDataCache(this.mysqlBaseDir, this.cleanInitializeDataTarGz)
       }
       this.timings.push(formatHrDiff('initializeMySQLData', process.hrtime(initializeTime)))
       initialized = true
@@ -189,7 +214,7 @@ export class MySQLServer {
     const startTime = process.hrtime()
     this.mysqldPid = await startMySQLd(this.mysqldPath, this.mysqlBaseDir, [`--port=${this.listenPort}`])
     this.timings.push(formatHrDiff('startMySQLd', process.hrtime(startTime)))
-    await writeFileAsync(`${path.join(this.mysqlBaseDir, '/data/mysqld.port')}`, this.listenPort)
+    await writeFileAsync(`${path.join(this.mysqlBaseDir, '/mysqld.port')}`, this.listenPort)
     this.initStatus = initialized ? 'initialized' : 'started'
     if (startingPidFile) {
       await unlinkAsync(startingPidFile).catch(() => {

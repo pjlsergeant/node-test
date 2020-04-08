@@ -3,11 +3,12 @@
 exports[`mysql common generateMySQLServerConfig should generate generic config 1`] = `
 "[mysqld]
 bind-address=127.0.0.1
-pid-file=/tmp/test/data/mysqld.local.pid
-socket=/tmp/test/mysql.sock
+pid-file=/tmp/test/mysqld.pid
+socket=/tmp/test/mysqld.sock
 datadir=/tmp/test/data
 secure_file_priv=/tmp/test/files
 tmpdir=/tmp
+max_allowed_packet=256M
 [mysqld-8.0]
 mysqlx=0
 "
@@ -16,11 +17,12 @@ mysqlx=0
 exports[`mysql common generateMySQLServerConfig should set user to mysql 1`] = `
 "[mysqld]
 bind-address=127.0.0.1
-pid-file=/tmp/test/data/mysqld.local.pid
-socket=/tmp/test/mysql.sock
+pid-file=/tmp/test/mysqld.pid
+socket=/tmp/test/mysqld.sock
 datadir=/tmp/test/data
 secure_file_priv=/tmp/test/files
 tmpdir=/tmp
+max_allowed_packet=256M
 user=mysql
 [mysqld-8.0]
 mysqlx=0

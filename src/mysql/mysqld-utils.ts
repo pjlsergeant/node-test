@@ -8,6 +8,7 @@ import { isFileNotFoundError } from '../unix/errors'
 
 const fsExistsAsync = util.promisify(fs.exists)
 const readFileAsync = util.promisify(fs.readFile)
+const unlinkAsync = util.promisify(fs.unlink)
 
 export interface MySQLServerConfig {
   [key: string]: { [key: string]: string }
@@ -67,8 +68,8 @@ export function generateMySQLServerConfig(
     // Defaults
     mysqld: {
       'bind-address': '127.0.0.1',
-      'pid-file': `${mysqlBaseDir}/data/mysqld.local.pid`,
-      socket: `${mysqlBaseDir}/mysql.sock`,
+      'pid-file': `${mysqlBaseDir}/mysqld.pid`,
+      socket: `${mysqlBaseDir}/mysqld.sock`,
       datadir: `${mysqlBaseDir}/data`,
       // eslint-disable-next-line @typescript-eslint/camelcase
       secure_file_priv: `${mysqlBaseDir}/files`,
@@ -138,12 +139,12 @@ export async function extractMySQLDataCache(mysqlBaseDir: string, initializeData
   const exitInfo = await cmd.waitForExit()
   if (exitInfo.code !== 0) {
     const output = Buffer.concat(data).toString('utf8')
-    throw new Error(`Failed to extract cached initialize data ${initializeDataTarGz} to ${mysqlBaseDir}\n${output}`)
+    throw new Error(`Failed to extract cached data folder ${initializeDataTarGz} to ${mysqlBaseDir}\n${output}`)
   }
 }
 
 export async function createMySQLDataCache(mysqlBaseDir: string, initializeDataTarGz: string): Promise<void> {
-  const cmd = new RunProcess('tar', ['-czf', initializeDataTarGz, 'data'], {
+  const cmd = new RunProcess('tar', ['-czf', path.resolve(initializeDataTarGz), 'data'], {
     cwd: path.resolve(mysqlBaseDir)
   })
   cmd.stdin?.end()
@@ -154,7 +155,7 @@ export async function createMySQLDataCache(mysqlBaseDir: string, initializeDataT
   const exitInfo = await cmd.waitForExit()
   if (exitInfo.code !== 0) {
     const output = Buffer.concat(data).toString('utf8')
-    throw new Error(`Failed to extract cached initialize data ${initializeDataTarGz} to ${mysqlBaseDir}\n${output}`)
+    throw new Error(`Failed to create ${initializeDataTarGz} of cached data in ${mysqlBaseDir}\n${output}`)
   }
 }
 
@@ -187,7 +188,14 @@ export async function startMySQLd(
   const stdoutPath = `${mysqlBaseDir}/stdout.log`
   const stderrPath = `${mysqlBaseDir}/stderr.log`
 
-  // TODO: Find way to get this in path
+  // Make sure we remove old output so we don't end up parsing that
+  unlinkAsync(stdoutPath).catch(() => {
+    // Ignore
+  })
+  unlinkAsync(stderrPath).catch(() => {
+    // Ignore
+  })
+
   const cmd = new RunProcess(
     './build/dist/bin/run-wrapper.js',
     [
