@@ -12,7 +12,7 @@ export class MySQLClient {
       host: '127.0.0.1',
       user: 'root',
       password: '',
-      connectionLimit: 100,
+      connectionLimit: 10,
       insecureAuth: true,
       multipleStatements: true,
       charset: 'utf8mb4',
@@ -20,11 +20,12 @@ export class MySQLClient {
     }
   }
 
-  public async getConnectionPool(database: string, cache = true): Promise<mysql.Pool> {
+  public async getConnectionPool(database: string, cache = true, options?: MySQLClientOptions): Promise<mysql.Pool> {
     let pool = cache ? this.databasePools[database] : null
     if (!pool) {
       pool = mysql.createPool({
         ...this.options,
+        ...options,
         database: database
       })
       if (cache) {
@@ -75,7 +76,7 @@ export class MySQLClient {
     let pool: mysql.Pool | null = null
     try {
       // Disable foreign keys for these connections
-      pool = await this.getConnectionPool(database, false)
+      pool = await this.getConnectionPool(database, false, { connectionLimit: 10 })
       pool.on('connection', connection => {
         connection.query(`
           SET SESSION FOREIGN_KEY_CHECKS=0;
