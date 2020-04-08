@@ -126,10 +126,30 @@ export class MySQLServer {
     // Initialize mysql data
     let initialized = false
     if (!fs.existsSync(`${this.mysqlBaseDir}/data`)) {
-      const myCnf: MySQLServerConfig = {}
+      const myCnf: MySQLServerConfig = {
+        mysqld: {},
+        'mysqld-8.0': {}
+      }
       if (process.getuid() === 0) {
         // Drop privileges if running as root
         myCnf.mysqld.user = 'mysql'
+      }
+      if (process.platform === 'darwin') {
+        // Work around issue with mysql 5.7 running out of FD on macOSX: https://bugs.mysql.com/bug.php?id=79125
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf.mysqld.table_open_cache = '250'
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf.mysqld.open_files_limit = '800'
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf.mysqld.max_connections = '500'
+
+        // Set limits higher for 8.x
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf['mysqld-8.0'].max_connections = '2000'
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf['mysqld-8.0'].open_files_limit = '5000'
+        // eslint-disable-next-line @typescript-eslint/camelcase
+        myCnf['mysqld-8.0'].table_open_cache = '2000'
       }
 
       // Create base dir

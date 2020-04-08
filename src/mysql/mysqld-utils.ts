@@ -72,7 +72,9 @@ export function generateMySQLServerConfig(
       datadir: `${mysqlBaseDir}/data`,
       // eslint-disable-next-line @typescript-eslint/camelcase
       secure_file_priv: `${mysqlBaseDir}/files`,
-      tmpdir
+      tmpdir,
+      // eslint-disable-next-line @typescript-eslint/camelcase
+      max_allowed_packet: '256M'
     },
     'mysqld-8.0': {
       mysqlx: '0'
