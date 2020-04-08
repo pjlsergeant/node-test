@@ -112,17 +112,37 @@ export class MySQLClient {
       `
     )
 
-    // Copy all tables from source to target database
-    const tables = await this.query<{ name: string }>(
+    // Find all tables and their columns in the database
+    // -- SELECT TABLE_NAME AS name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE();
+    const tableColumns = await this.query<{ name: string; column: string; extra: string }>(
       pool,
       `
-        SELECT TABLE_NAME AS name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE();
+        SELECT TABLE_NAME as \`name\`, COLUMN_NAME as \`column\`, EXTRA as extra
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        ORDER BY \`name\`;
       `
     )
+    const tables: Array<{ name: string; columns: string[] }> = []
+    for (const tableColumn of tableColumns) {
+      if (tableColumn.extra.match(/GENERATED/)) {
+        // Skip generated columns as we can't INSERT TO them
+        continue
+      }
+      const lastTable = tables.length > 0 ? tables[tables.length - 1] : { name: '', columns: [] }
+      if (lastTable.name === tableColumn.name) {
+        lastTable.columns.push(tableColumn.column)
+      } else {
+        tables.push({
+          name: tableColumn.name,
+          columns: [tableColumn.column]
+        })
+      }
+    }
 
     const promises: Promise<void>[] = []
     for (const table of tables) {
-      promises.push(this.cloneTable(pool, table.name, destinationDatabase, table.name))
+      promises.push(this.cloneTable(pool, table.name, destinationDatabase, table.name, table.columns))
     }
     await Promise.all(promises)
   }
@@ -131,14 +151,18 @@ export class MySQLClient {
     pool: mysql.Pool,
     sourceTable: string,
     destinationDatabase: string,
-    destinationTable: string
+    destinationTable: string,
+    columns?: string[]
   ): Promise<void> {
+    const selectColumns = columns ? columns.map(c => `\`${c}\``).join(', ') : '*'
+    const insertColumns = columns ? `(${selectColumns})` : ''
+
     await this.query(
       pool,
       `
         CREATE TABLE \`${destinationDatabase}\`.\`${destinationTable}\` LIKE \`${sourceTable}\`;
         ALTER TABLE \`${destinationDatabase}\`.\`${destinationTable}\` DISABLE KEYS;
-        INSERT INTO \`${destinationDatabase}\`.\`${destinationTable}\` SELECT * FROM \`${sourceTable}\`;
+        INSERT INTO \`${destinationDatabase}\`.\`${destinationTable}\` ${insertColumns} SELECT ${selectColumns} FROM \`${sourceTable}\`;
         ALTER TABLE \`${destinationDatabase}\`.\`${destinationTable}\` ENABLE KEYS;
       `
     )
