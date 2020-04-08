@@ -62,12 +62,13 @@ export class MySQLServer {
   private ignoreCustomCache: boolean
 
   public constructor(options: MySQLServerOptions = {}) {
+    // TODO: Support closing mysqld when test closes when using tmp folder
     this.options = options
     this.mysqldPath = options.mysqldPath || 'mysqld'
     this.cachePath = options.cachePath || './cache'
     this.myCnfCustom = options.myCnf || {}
     this.ignoreCache = options.ignoreCache || false
-    this.ignoreCustomCache = (options.ignoreCache && options.ignoreCustomCache) || false
+    this.ignoreCustomCache = options.ignoreCustomCache || options.ignoreCache || false
     this.initPromise = this.init()
     this.initPromise.catch(() => {
       // Do nothing as we will throw at later calls
