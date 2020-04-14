@@ -144,7 +144,7 @@ export class RunProcess {
         this.cmd.kill('SIGKILL')
       }
     } else if (!this.stopped) {
-      throw new StandardStreamsStillOpenError('Process exitted but standard steams are still open')
+      throw new StandardStreamsStillOpenError('Process exitted but standard streams are still open')
     }
 
     return await this.stopPromise
@@ -355,26 +355,26 @@ export class RunProcess {
         }, timeout)
       }
 
+      // To avoid typing this twice below
+      function clearTimeouts(): void {
+        if (timeoutHandle !== null) {
+          clearTimeout(timeoutHandle)
+        }
+        if (outputMatcherInterval !== null) {
+          clearInterval(outputMatcherInterval)
+        }
+      }
+
       // Check for input every 100 ms, remember to clear timeouts/intervals (to avoid hanging)
       outputMatcherInterval = setInterval(() => {
         if (isNamedPipe(this.namedPipe)) {
           const match = this.namedPipe.outDataStr.match(regex)
           if (match) {
-            if (timeoutHandle) {
-              clearTimeout(timeoutHandle)
-            }
-            if (outputMatcherInterval !== null) {
-              clearInterval(outputMatcherInterval)
-            }
+            clearTimeouts()
             resolve(match)
           }
         } else {
-          if (timeoutHandle) {
-            clearTimeout(timeoutHandle)
-          }
-          if (outputMatcherInterval !== null) {
-            clearInterval(outputMatcherInterval)
-          }
+          clearTimeouts()
           reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
         }
       }, 100)
@@ -411,7 +411,7 @@ export class RunProcess {
  * @param pipeLocation the base location/pipename
  * @param isInAndOut if 2 pipes should be made with .in and .out extensions
  */
-export async function createNamedPipe(pipeLocation: string, isInAndOut = false): Promise<void> {
+export async function createNamedPipe(pipeLocation: string, isInAndOut: boolean): Promise<void> {
   if (isInAndOut) {
     await new RunProcess('mkfifo', [`${pipeLocation}.in`, `${pipeLocation}.out`]).waitForExit()
   } else {

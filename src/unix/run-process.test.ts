@@ -230,9 +230,9 @@ describe('run-process', () => {
     it('should run a process which uses named pipes (fifo)', async done => {
       const pipeLocation = '/tmp/testpipe1'
       // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
-      const cmd = new RunProcess('watch', ['echo', 'keepitgoing'], undefined, false, pipeLocation)
+      const cmd = new RunProcess('watch', ['echo', 'keepitgoing'], {}, false, pipeLocation, false)
 
-      await createNamedPipe(pipeLocation)
+      await createNamedPipe(pipeLocation, false)
       await cmd.setupNamedPipeServer()
 
       await cmd.writeToNamedPipe('suttekarl')
@@ -248,9 +248,9 @@ describe('run-process', () => {
     it('should run a process which uses named pipes (fifo), but never find the output', async done => {
       const pipeLocation = '/tmp/testpipe2'
       // Run random command which does not exit. (Is not important we are testing the named pipe functionality)
-      const cmd = new RunProcess('watch', ['echo', 'hello'], undefined, false, '/tmp/testpipe2')
+      const cmd = new RunProcess('watch', ['echo', 'hello'], {}, false, '/tmp/testpipe2')
 
-      await createNamedPipe(pipeLocation)
+      await createNamedPipe(pipeLocation, false)
       await cmd.setupNamedPipeServer()
 
       await cmd.writeToNamedPipe('suttekarl1')
