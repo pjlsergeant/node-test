@@ -5,7 +5,8 @@
   "main": "build/dist/src/index.js",
   "types": "build/dist/src/index.d.ts",
   "scripts": {
-    "test": "TZ=UTC jest",
+    "test": "TZ=UTC jest --runInBand",
+    "cov": "TZ=UTC jest --runInBand --coverage=true",
     "build": "npm run build:types && npm run build:js:src",
     "build:js": "npm run build:js:src",
     "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
@@ -15,8 +16,7 @@
     "prepare": "npm run build",
     "ci-jest": "TZ=UTC jest --silent --no-color --json 2> /dev/null; res=$?; echo; exit $res",
     "ci-audit": "npm audit --json || true",
-    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true",
-    "cov": "TZ=UTC jest --coverage=true"
+    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true"
   },
   "repository": {
     "type": "git",

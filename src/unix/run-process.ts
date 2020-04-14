@@ -58,7 +58,6 @@ export class RunProcess {
 
     // Exec or spawn command
     shouldExec ? (this.cmd = exec(command)) : (this.cmd = spawn(command, args || [], options))
-    // this.cmd = spawn(command, args || [], options)
     this.isExec = shouldExec
     this.detached = options.detached ? options.detached : false
 
@@ -130,10 +129,7 @@ export class RunProcess {
     this.stopReason = error || null
 
     // Close named pipe stuff
-    if (isNamedPipe(this.namedPipe)) {
-      this.namedPipe.server?.removeAllListeners()
-      this.namedPipe.server?.destroy()
-    }
+    this.destroyNamedPipeServer()
 
     if (this.running) {
       this.kill('SIGTERM')
@@ -326,6 +322,16 @@ export class RunProcess {
     })
   }
 
+  /**
+   * When reading from a named pipe with "simpler" scripts, it will need a new setup everytime. Call this between every message, or at the end.
+   */
+  public destroyNamedPipeServer(): void {
+    if (isNamedPipe(this.namedPipe)) {
+      this.namedPipe.server?.removeAllListeners()
+      this.namedPipe.server?.destroy()
+    }
+  }
+
   public async writeToNamedPipe(input: string): Promise<void> {
     if (this.namedPipe !== undefined) {
       const location = this.namedPipe.isInAndOut ? `${this.namedPipe.location}.in` : `${this.namedPipe.location}`
@@ -378,18 +384,6 @@ export class RunProcess {
           reject(new NoNamedPipeError(`No named pipe set, when waiting for regex: ${regex}`))
         }
       }, 100)
-
-      // Throw if the process exist before finding the output
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.stopPromise.then(() => {
-        reject(
-          this.stopReason
-            ? this.stopReason
-            : new ExitBeforeOutputMatchError(
-                `Process exitted before regex: ${regex} was found.\nTotal outDataStr:\n${this.namedPipe?.outDataStr}`
-              )
-        )
-      })
     })
   }
 
