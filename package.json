@@ -3,19 +3,22 @@
   "version": "0.7.0",
   "description": "Test utilities for Node projects",
   "main": "build/dist/src/index.js",
+  "bin": {
+    "run-wrapper": "build/dist/bin/run-wrapper.js",
+    "local-mysql": "build/dist/bin/local-mysql.js"
+  },
   "types": "build/dist/src/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
-    "build": "npm run build:types && npm run build:js:src",
-    "build:js": "npm run build:js:src",
-    "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
+    "build": "build src bin",
+    "build:js": "build --skip-typings -- src bin",
     "build:types": "tsc --emitDeclarationOnly",
-    "lint": "eslint './src/**/*.{ts,tsx}'",
-    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
+    "lint": "eslint './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
     "prepare": "npm run build",
     "ci-jest": "TZ=UTC jest --silent --no-color --json 2> /dev/null; res=$?; echo; exit $res",
     "ci-audit": "npm audit --json || true",
-    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true",
+    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}' || true",
     "cov": "TZ=UTC jest --coverage=true"
   },
   "repository": {
@@ -38,7 +41,9 @@
     "@babel/preset-env": "7.8.7",
     "@babel/preset-typescript": "7.8.3",
     "@connectedcars/setup": "^0.8.3",
+    "@types/yargs": "^15.0.4",
     "@types/jest": "25.1.4",
+    "@types/mysql": "^2.15.9",
     "@types/node": "^13.9.1",
     "@types/sinon": "^7.5.2",
     "@typescript-eslint/eslint-plugin": "2.24.0",
@@ -50,11 +55,13 @@
     "eslint-plugin-prettier": "3.1.2",
     "eslint-plugin-simple-import-sort": "^5.0.2",
     "jest": "25.1.0",
+    "mysql": "^2.18.1",
     "prettier": "1.19.1",
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "sinon": "^9.0.1"
+    "sinon": "^9.0.1",
+    "yargs": "^15.3.0"
   },
   "engines": {
     "node": ">=12.10.0"

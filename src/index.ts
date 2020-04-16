@@ -23,5 +23,6 @@ export {
   StopBecauseOfOutputError,
   TimeoutError,
   readPidFile,
-  touchFiles
+  touchFiles,
+  isDockerOverlay2
 } from './unix'
