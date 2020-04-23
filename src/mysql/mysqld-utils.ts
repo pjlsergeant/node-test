@@ -197,7 +197,7 @@ export async function startMySQLd(
   })
 
   const cmd = new RunProcess(
-    './build/dist/bin/run-wrapper.js',
+    'run-wrapper',
     [
       `--stdout-file=${stdoutPath}`,
       `--stderr-file=${stderrPath}`,

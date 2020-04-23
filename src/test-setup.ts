@@ -18,4 +18,5 @@ module.exports = async () => {
   } catch (e) {
     // Ignore
   }
+  process.env.PATH = `build/dist/bin:${process.env.PATH}`
 }
