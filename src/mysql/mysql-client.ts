@@ -20,7 +20,7 @@ export class MySQLClient {
     }
   }
 
-  public async getConnectionPool(database: string, cache = true, options?: MySQLClientOptions): Promise<mysql.Pool> {
+  public getConnectionPoolSync(database: string, cache = true, options?: MySQLClientOptions): mysql.Pool {
     let pool = cache ? this.databasePools[database] : null
     if (!pool) {
       pool = mysql.createPool({
@@ -33,6 +33,10 @@ export class MySQLClient {
       }
     }
     return pool
+  }
+
+  public async getConnectionPool(database: string, cache = true, options?: MySQLClientOptions): Promise<mysql.Pool> {
+    return this.getConnectionPoolSync(database, cache, options)
   }
 
   public async query<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T[]> {
