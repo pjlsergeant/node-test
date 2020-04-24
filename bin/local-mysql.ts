@@ -26,8 +26,8 @@ async function main(argv: string[]): Promise<number> {
     .options({
       mysqlBaseDir: {
         type: 'string',
-        default: 'mysql-context',
-        describe: `Sets mysqld base dir location`
+        default: '',
+        describe: `Sets mysqld base dir location, default to picking a tmp folder`
       },
       migrationsDir: {
         type: 'string',
