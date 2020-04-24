@@ -4,9 +4,10 @@ import fs from 'fs'
 import util from 'util'
 import yargs from 'yargs'
 
-import { MySQLServer } from '../src/mysql/mysql-server'
+import { Migrate, MySQLClient, MySQLServer } from '../src/mysql'
 
 const openAsync = util.promisify(fs.open)
+const existsAsync = util.promisify(fs.exists)
 
 async function readAsync(fd: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -26,7 +27,12 @@ async function main(argv: string[]): Promise<number> {
       mysqlBaseDir: {
         type: 'string',
         default: 'mysql-context',
-        describe: `Sets mysqld base dir location `
+        describe: `Sets mysqld base dir location`
+      },
+      migrationsDir: {
+        type: 'string',
+        default: 'migrations',
+        describe: `Will apply migrations if the migrations folder exists exists`
       }
     })
     .help()
@@ -36,6 +42,17 @@ async function main(argv: string[]): Promise<number> {
   console.log(
     `MySQLd started with ${await mySqlServer.getInitStatus()} listening on port ${await mySqlServer.getListenPort()}`
   )
+
+  if (await existsAsync(flags.migrationsDir)) {
+    const mySqlClient = new MySQLClient({ port: await mySqlServer.getListenPort() })
+    const initialMigrate = new Migrate({
+      mysqlClient: mySqlClient,
+      migrationsDir: flags.migrationsDir
+    })
+    console.log(`Running migrations`)
+    const migrationResultBefore = await initialMigrate.migrate()
+    console.log(migrationResultBefore)
+  }
 
   let exitReason: string | null = null
   const exitPromises: Array<Promise<string>> = [
