@@ -46,6 +46,7 @@ export class Migrate {
   private databaseMap!: { [key: string]: string[] }
   private basePool!: mysql.Pool
   private ignoreCache: boolean
+  private timings: string[] = []
 
   public constructor(options: MigrateOptions) {
     this.mysqlClient = options.mysqlClient
@@ -59,14 +60,20 @@ export class Migrate {
   }
 
   public async init(): Promise<void> {
-    const [databasesJSON, schemaFolders] = await Promise.all([
-      readFile(`${this.migrationsDir}/databases.json`, 'utf8'),
-      readdir(this.migrationsDir)
-    ])
-    this.databaseMap = JSON.parse(databasesJSON)
-    this.schemaFolders = schemaFolders.filter(s => s in this.databaseMap)
-
+    await this.saveTiming<void>('loadDatabaseJson', async () => {
+      const [databasesJSON, schemaFolders] = await Promise.all([
+        readFile(`${this.migrationsDir}/databases.json`, 'utf8'),
+        readdir(this.migrationsDir)
+      ])
+      this.databaseMap = JSON.parse(databasesJSON)
+      this.schemaFolders = schemaFolders.filter(s => s in this.databaseMap)
+    })
     this.basePool = await this.mysqlClient.getConnectionPool('mysql')
+  }
+
+  public async getTimings(): Promise<string[]> {
+    await this.initPromise // Make sure init has finished
+    return this.timings
   }
 
   public async cleanup(): Promise<void> {
@@ -96,7 +103,7 @@ export class Migrate {
     for (const schemaFolder of this.schemaFolders) {
       promises.push(this.migrateSchema(schemaFolder, until))
     }
-    const migrations = await Promise.all(promises)
+    const migrations = await this.saveTiming('migrateAllSchema', Promise.all(promises))
 
     // Populate the MigrationResult structure
     for (const schemaFolder of this.schemaFolders) {
@@ -106,22 +113,34 @@ export class Migrate {
   }
 
   public async migrateSchema(schemaFolder: string, until?: string): Promise<SchemaMigrationResult> {
+    // Find out if we should skip cache if all database already exists for this schemaFolder
     const cacheFile = `${this.cachePath}/${schemaFolder}.sql`
     if (!this.ignoreCache && (await existsAsync(cacheFile))) {
-      try {
-        const contents = await readFile(cacheFile, 'utf8')
-        await this.mysqlClient.query(this.basePool, contents)
-      } catch (e) {
-        throw new Error(`Failed applying cache file ${cacheFile}: ${e}`)
+      const existingDatabases = await this.mysqlClient.queryArray<string>(
+        this.basePool,
+        `
+          SELECT SCHEMA_NAME as \`name\`
+          FROM information_schema.SCHEMATA;
+        `
+      )
+      const skipCache = this.databaseMap[schemaFolder].some(d => existingDatabases.includes(d))
+      if (!skipCache) {
+        const cacheData = await readFile(cacheFile, 'utf8')
+        try {
+          await this.saveTiming(`applyCacheFile(${cacheFile})`, this.mysqlClient.query(this.basePool, cacheData))
+        } catch (e) {
+          throw new Error(`Failed applying cache file ${cacheFile}: ${e}`)
+        }
       }
     }
+
     const result: SchemaMigrationResult = {}
     const migrations = await this.readMigrations(schemaFolder)
-    const promises: Array<Promise<Migration[]>> = []
+    const migrationPromises: Array<Promise<Migration[]>> = []
     for (const database of this.databaseMap[schemaFolder]) {
-      promises.push(this.migrateDatabase(database, migrations, until))
+      migrationPromises.push(this.migrateDatabase(database, migrations, until))
     }
-    const dbMigrations = await Promise.all(promises)
+    const dbMigrations = await this.saveTiming(`applyAllMigrations(${schemaFolder})`, Promise.all(migrationPromises))
 
     // Populate the SchemaMigrationResult structure
     for (const database of this.databaseMap[schemaFolder]) {
@@ -201,5 +220,13 @@ export class Migrate {
       name: match[2],
       sql
     }
+  }
+
+  private async saveTiming<T>(name: string, wrap: (() => Promise<T>) | Promise<T>): Promise<T> {
+    const start = process.hrtime()
+    const result = typeof wrap === 'function' ? await wrap() : await wrap
+    const diff = process.hrtime(start)
+    this.timings.push(`${name} ${diff[0]}s ${diff[1] / 1000000}ms`)
+    return result
   }
 }
