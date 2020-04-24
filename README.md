@@ -23,8 +23,8 @@ const mySqlClient = new MySQLClient({ port: await mySqlServer.getListenPort() })
 const migrate = new Migrate({
   mysqlClient: mySqlClient,
   // First try local cache else use the one in @connectedcars/data
-  cachePaths:['./cache', 'node_modules/@connectedcars/data/cache'],
-  migrationsDir: 'node_modules/@connectedcars/data/migrations',
+  cachePaths:['./cache', './node_modules/@connectedcars/data/cache'],
+  migrationsDir: './node_modules/@connectedcars/data/migrations',
 })
 let migrationResult = await migrate.migrate() // Run all migrations
 
