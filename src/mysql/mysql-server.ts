@@ -52,7 +52,7 @@ export class MySQLServer {
 
   private mysqldPath: string
   private myCnfCustom: MySQLServerConfig
-  private mysqldPid!: number
+  private mysqldPid = 0
   private initPromise: Promise<void>
   private options: MySQLServerOptions
   private cachePath: string
@@ -87,8 +87,10 @@ export class MySQLServer {
 
   public async kill(sigKillTimeout = 5000): Promise<void> {
     await this.initPromise // Make sure init has finished
-    await stopPid(this.mysqldPid, sigKillTimeout)
-    this.initStatus = 'stopped'
+    if (this.initStatus !== 'stopped' && this.mysqldPid !== 0) {
+      await stopPid(this.mysqldPid, sigKillTimeout)
+      this.initStatus = 'stopped'
+    }
   }
 
   public async getListenPort(): Promise<number> {
