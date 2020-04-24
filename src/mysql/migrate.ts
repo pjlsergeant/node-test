@@ -33,14 +33,14 @@ export interface SchemaMigrationResult {
 export interface MigrateOptions {
   mysqlClient: MySQLClient
   migrationsDir?: string
-  cachePath?: string
+  cachePaths?: string[]
   ignoreCache?: boolean
 }
 
 export class Migrate {
   private mysqlClient: MySQLClient
   private migrationsDir: string
-  private cachePath: string
+  private cachePaths: string[] = []
   private initPromise: Promise<void>
   private schemaFolders!: string[]
   private databaseMap!: { [key: string]: string[] }
@@ -51,7 +51,7 @@ export class Migrate {
   public constructor(options: MigrateOptions) {
     this.mysqlClient = options.mysqlClient
     this.migrationsDir = options.migrationsDir || './migrations'
-    this.cachePath = options.cachePath || './cache'
+    this.cachePaths = options.cachePaths || ['./cache']
     this.ignoreCache = options.ignoreCache || false
     this.initPromise = this.init()
     this.initPromise.catch(() => {
@@ -86,12 +86,15 @@ export class Migrate {
   }
 
   public async cacheSchemas(): Promise<void> {
-    await mkdirAsync(this.cachePath, { recursive: true, mode: 0o777 })
+    if (this.cachePaths.length === 0) {
+      throw new Error('No cache paths defined')
+    }
+    await mkdirAsync(this.cachePaths[0], { recursive: true, mode: 0o777 })
     for (const schemaFolder of this.schemaFolders) {
       await dumpDatabase(
         this.mysqlClient.options.port || 0, // TODO: Make this a lot prettier
         this.databaseMap[schemaFolder],
-        `${this.cachePath}/${schemaFolder}.sql`
+        `${this.cachePaths}/${schemaFolder}.sql`
       )
     }
   }
@@ -113,9 +116,18 @@ export class Migrate {
   }
 
   public async migrateSchema(schemaFolder: string, until?: string): Promise<SchemaMigrationResult> {
+    // Find the first cache file that matches
+    let selectCacheFile = ''
+    for (const cachePath of this.cachePaths) {
+      const possibleCacheFile = `${cachePath}/${schemaFolder}.sql`
+      if (await existsAsync(possibleCacheFile)) {
+        selectCacheFile = possibleCacheFile
+        break
+      }
+    }
+
     // Find out if we should skip cache if all database already exists for this schemaFolder
-    const cacheFile = `${this.cachePath}/${schemaFolder}.sql`
-    if (!this.ignoreCache && (await existsAsync(cacheFile))) {
+    if (!this.ignoreCache && selectCacheFile) {
       const existingDatabases = await this.mysqlClient.queryArray<string>(
         this.basePool,
         `
@@ -125,11 +137,11 @@ export class Migrate {
       )
       const skipCache = this.databaseMap[schemaFolder].some(d => existingDatabases.includes(d))
       if (!skipCache) {
-        const cacheData = await readFile(cacheFile, 'utf8')
+        const cacheData = await readFile(selectCacheFile, 'utf8')
         try {
-          await this.saveTiming(`applyCacheFile(${cacheFile})`, this.mysqlClient.query(this.basePool, cacheData))
+          await this.saveTiming(`applyCacheFile(${selectCacheFile})`, this.mysqlClient.query(this.basePool, cacheData))
         } catch (e) {
-          throw new Error(`Failed applying cache file ${cacheFile}: ${e}`)
+          throw new Error(`Failed applying cache file ${selectCacheFile}: ${e}`)
         }
       }
     }
