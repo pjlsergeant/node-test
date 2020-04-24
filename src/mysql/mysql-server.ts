@@ -40,7 +40,7 @@ export interface MySQLServerOptions {
   ignoreCustomCache?: boolean
 }
 
-type InitStatus = 'unknown' | 'started' | 'initialized' | 'resumed'
+type InitStatus = 'unknown' | 'started' | 'initialized' | 'resumed' | 'stopped'
 
 const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
 
@@ -88,6 +88,7 @@ export class MySQLServer {
   public async kill(sigKillTimeout = 5000): Promise<void> {
     await this.initPromise // Make sure init has finished
     await stopPid(this.mysqldPid, sigKillTimeout)
+    this.initStatus = 'stopped'
   }
 
   public async getListenPort(): Promise<number> {
@@ -107,6 +108,9 @@ export class MySQLServer {
 
   public async saveAsCustomInitState(): Promise<void> {
     await this.initPromise // Make sure init has finished
+    if (this.initStatus !== 'stopped') {
+      throw new Error('Can not save the init state while mysql is running')
+    }
     await createMySQLDataCache(this.mysqlBaseDir, this.customInitializeDataTarGz)
   }
 

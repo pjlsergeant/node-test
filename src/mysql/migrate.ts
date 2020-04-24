@@ -10,12 +10,12 @@ const readFile = util.promisify(fs.readFile)
 const mkdirAsync = util.promisify(fs.mkdir)
 const existsAsync = util.promisify(fs.exists)
 
-interface MigrationRow {
+export interface MigrationRow {
   timestamp: string
   name: string
 }
 
-interface Migration {
+export interface Migration {
   path: string
   timestamp: string
   name: string
