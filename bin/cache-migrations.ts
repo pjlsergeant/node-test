@@ -30,7 +30,7 @@ async function main(argv: string[]): Promise<number> {
     console.log(`mysqld resume start: ${testResumeMysqlServerTiming / 1000}ms`)
 
     const mySqlClient = new MySQLClient({ port: await mySqlServer.getListenPort() })
-    const migrate = new Migrate({ mysqlClient: mySqlClient, migrationsDir: migrationsDir, ignoreCache: true })
+    const migrate = new Migrate({ mysqlClient: mySqlClient, migrationsPaths: [migrationsDir], ignoreCache: true })
     const [migrationTiming] = await time(migrate.migrate())
     console.log(`migration: ${migrationTiming / 1000}ms`)
 

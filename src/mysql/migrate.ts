@@ -32,14 +32,14 @@ export interface SchemaMigrationResult {
 
 export interface MigrateOptions {
   mysqlClient: MySQLClient
-  migrationsDir?: string
+  migrationsPaths?: string[]
   cachePaths?: string[]
   ignoreCache?: boolean
 }
 
 export class Migrate {
   private mysqlClient: MySQLClient
-  private migrationsDir: string
+  private migrationsDir = ''
   private cachePaths: string[] = []
   private initPromise: Promise<void>
   private schemaFolders!: string[]
@@ -47,10 +47,11 @@ export class Migrate {
   private basePool!: mysql.Pool
   private ignoreCache: boolean
   private timings: string[] = []
+  private migrationsPaths: string[]
 
   public constructor(options: MigrateOptions) {
     this.mysqlClient = options.mysqlClient
-    this.migrationsDir = options.migrationsDir || './migrations'
+    this.migrationsPaths = options.migrationsPaths || ['./migrations']
     this.cachePaths = options.cachePaths || ['./cache']
     this.ignoreCache = options.ignoreCache || false
     this.initPromise = this.init()
@@ -60,6 +61,16 @@ export class Migrate {
   }
 
   public async init(): Promise<void> {
+    // Find databases.json
+    for (const migrationPath of this.migrationsPaths) {
+      if (await existsAsync(`${migrationPath}/databases.json`)) {
+        this.migrationsDir = migrationPath
+        break
+      }
+    }
+    if (!this.migrationsDir) {
+      throw new Error(`databases.json could not be found in any of the migration paths`)
+    }
     await this.saveTiming<void>('loadDatabaseJson', async () => {
       const [databasesJSON, schemaFolders] = await Promise.all([
         readFile(`${this.migrationsDir}/databases.json`, 'utf8'),

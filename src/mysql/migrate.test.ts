@@ -24,7 +24,7 @@ describe('Migrate', () => {
   it('should migrate schema over two migration runs', async () => {
     const migrate = new Migrate({
       mysqlClient: mySqlClient,
-      migrationsDir: 'src/mysql/resources/migrations',
+      migrationsPaths: ['src/mysql/resources/migrations'],
       ignoreCache: true
     })
     await migrate.cleanup()
@@ -60,7 +60,7 @@ describe('Migrate', () => {
     // Do initial migration and without using cache
     const initialMigrate = new Migrate({
       mysqlClient: mySqlClient,
-      migrationsDir: 'src/mysql/resources/migrations',
+      migrationsPaths: ['src/mysql/resources/migrations'],
       ignoreCache: true
     })
     await initialMigrate.cleanup()
@@ -70,7 +70,7 @@ describe('Migrate', () => {
 
     const cachedMigrate = new Migrate({
       mysqlClient: mySqlClient,
-      migrationsDir: 'src/mysql/resources/migrations'
+      migrationsPaths: ['src/mysql/resources/migrations']
     })
 
     await cachedMigrate.cleanup()
@@ -79,7 +79,7 @@ describe('Migrate', () => {
   })
 
   it.skip('should migrate data repo to newest version', async () => {
-    const migrate = new Migrate({ mysqlClient: mySqlClient, migrationsDir: 'data/migrations' })
+    const migrate = new Migrate({ mysqlClient: mySqlClient, migrationsPaths: ['data/migrations'] })
     await migrate.cleanup()
     const [migrationResult, timingBefore] = await time(migrate.migrate())
     console.log(timingBefore / 1000)
