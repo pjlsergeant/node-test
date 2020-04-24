@@ -37,6 +37,8 @@ async function main(argv: string[]): Promise<number> {
     const [cacheTiming] = await time(migrate.cacheSchemas())
     console.log(`schema cache: ${cacheTiming / 1000}ms`)
 
+    // Make sure the server is stopped before we copy the state
+    await mySqlServer.kill()
     const [snapshotTiming] = await time(mySqlServer.saveAsCustomInitState())
     console.log(`custom init snapshot: ${snapshotTiming / 1000}ms`)
 
