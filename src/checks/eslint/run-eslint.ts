@@ -1,8 +1,6 @@
-import { FormattedTestResults } from '@jest/test-result/build/types'
-
 import { RunProcess } from '../../unix/run-process'
 
-export async function runEslint(): Promise<FormattedTestResults> {
+export async function runEslint(): Promise<EslintData[]> {
   const cmd = new RunProcess('eslint', ['--format', 'json', './src/**/*.{ts,tsx}'])
   const data: Buffer[] = []
   cmd.stdout?.on('data', chunk => {

@@ -23,9 +23,8 @@ export const jestCheck = ({ data, org, repo, sha }: JestInput): CheckResult => {
   }
 
   if (!data) {
-	    return result
+    return result
   }
-
 
   result.conclusion = data.success ? 'success' : 'failure'
 

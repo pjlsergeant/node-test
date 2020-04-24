@@ -12,7 +12,8 @@ export interface CheckResult {
 export interface CheckOutput {
   title: string
   summary: string
-  annotations: Annotation[]
+  annotations?: Annotation[]
+  text?: string
 }
 
 export interface Annotation {

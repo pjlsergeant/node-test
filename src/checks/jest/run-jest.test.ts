@@ -33,7 +33,7 @@ describe('run-jest', () => {
 
   it('should start a react-scripts test process and wait for exit', async () => {
     await commandEmulation.registerCommand(
-      'react-scripts test',
+      'react-scripts',
       data => {
         process.stdout.write(JSON.stringify(data))
         process.exit(0)
@@ -45,9 +45,9 @@ describe('run-jest', () => {
     expect(jestJson).toEqual(jestSuccesfulOutput)
   })
 
-  it('should handle jest failing to launch', async () => {
+  it('should handle react-scripts test failing to launch', async () => {
     await commandEmulation.registerCommand(
-      'react-scripts test',
+      'react-scripts',
       data => {
         process.stdout.write(JSON.stringify(data))
         process.exit(1)

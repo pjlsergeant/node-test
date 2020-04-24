@@ -2,10 +2,14 @@
 
 import args from 'args'
 
+import { auditCheck, AuditInput } from '../src/checks/audit/audit'
+import { runAudit } from '../src/checks/audit/run-audit'
 import { eslintCheck, EslintInput } from '../src/checks/eslint/eslint'
-import { runEslintBin } from '../src/checks/eslint/run-eslint'
+import { runEslint } from '../src/checks/eslint/run-eslint'
 import { jestCheck, JestInput } from '../src/checks/jest/jest'
-import { runJestBin } from '../src/checks/jest/run-jest'
+import { runJest, runReactScriptsTest } from '../src/checks/jest/run-jest'
+
+process.env.PATH = `./node_modules/.bin:${process.env.PATH}`
 
 async function main() {
   const commands: {
@@ -18,7 +22,7 @@ async function main() {
       desc: 'Runs Jest with CI output',
       fn: async () => {
         try {
-          const result = await runJestBin()
+          const result = await runJest()
           const jestInput: JestInput = {
             data: result,
             org: 'null',
@@ -32,11 +36,30 @@ async function main() {
         }
       }
     },
+    'jest-cra-ci': {
+      desc: 'Runs Jest with CI output',
+      fn: async () => {
+        try {
+          const result = await runReactScriptsTest()
+          const jestInput: JestInput = {
+            data: result,
+            org: 'null',
+            repo: 'null',
+            sha: 'null'
+          }
+          console.log(result)
+          const checkOutput = jestCheck(jestInput)
+          console.log(JSON.stringify(checkOutput, null, 2))
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    },
     'eslint-ci': {
       desc: 'Runs Eslint with CI output',
       fn: async () => {
         try {
-          const result = await runEslintBin()
+          const result = await runEslint()
           const eslintInput: EslintInput = {
             data: result,
             org: 'null',
@@ -44,6 +67,21 @@ async function main() {
             sha: 'null'
           }
           const checkOutput = eslintCheck(eslintInput)
+          console.log(JSON.stringify(checkOutput, null, 2))
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    },
+    'audit-ci': {
+      desc: 'Runs audit with CI output',
+      fn: async () => {
+        try {
+          const result = await runAudit()
+          const auditInput: AuditInput = {
+            data: result
+          }
+          const checkOutput = auditCheck(auditInput)
           console.log(JSON.stringify(checkOutput, null, 2))
         } catch (error) {
           console.error(error)
