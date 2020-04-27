@@ -46,6 +46,14 @@ export class MySQLClient {
     })
   }
 
+  public async querySingle<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T | null> {
+    const result = await this.query<T>(pool, sql, values)
+    if (result.length > 0) {
+      return result[0]
+    }
+    return null
+  }
+
   public async queryArray<T>(pool: mysql.Pool | mysql.Connection, sql: string, values?: string[]): Promise<T[]> {
     const result = await this.query<{ [key: string]: T }>(pool, sql, values)
     if (result.length == 0) {
@@ -89,12 +97,42 @@ export class MySQLClient {
       const destinationDatabase = `${database}-${databasePostfix}`
       await this.cloneDatabase(pool, destinationDatabase)
 
-      return this.getConnectionPool(destinationDatabase)
+      return destinationDatabase
     } finally {
       pool?.end()
     }
   }
 
+  public async compareDatabases(pool: mysql.Pool, database1: string, database2: string): Promise<boolean> {
+    const tables = await this.query<{ name: string; database: string }>(
+      pool,
+      `
+        SELECT table_name as name, table_schema as \`database\` FROM information_schema.tables
+        WHERE table_schema IN('${database1}', '${database2}');
+      `
+    )
+
+    // Check if we have table in either database that does not exists in the other
+    const tableNames1 = tables
+      .filter(t => t.database === database1)
+      .map(t => t.name)
+      .sort()
+    const tablesName2 = tables
+      .filter(t => t.database === database2)
+      .map(t => t.name)
+      .sort()
+    const isSame = tableNames1.every(t => tablesName2.includes(t)) && tablesName2.every(e => tableNames1.includes(e))
+    if (!isSame) {
+      return false
+    }
+
+    const promises: Promise<boolean>[] = []
+    for (const table of tables) {
+      promises.push(this.compareTables(pool, database1, table.name, database2, table.name))
+    }
+    const result = await Promise.all(promises)
+    return result.every(r => r === true)
+  }
   public async cloneDatabase(pool: mysql.Pool, destinationDatabase: string): Promise<void> {
     // Fetch charset and collation from source database
     const dbInfo = await this.query<{ charset: string; collation: string }>(
@@ -145,6 +183,55 @@ export class MySQLClient {
       promises.push(this.cloneTable(pool, table.name, destinationDatabase, table.name, table.columns))
     }
     await Promise.all(promises)
+  }
+
+  public async compareTables(
+    pool: mysql.Pool,
+    database1: string,
+    table1: string,
+    database2: string,
+    table2: string
+  ): Promise<boolean> {
+    return (
+      (await this.compareTableDdl(pool, database1, table1, database2, table2)) &&
+      (await this.compareTableData(pool, database1, table1, database2, table2))
+    )
+  }
+
+  public async compareTableData(
+    pool: mysql.Pool,
+    database1: string,
+    table1: string,
+    database2: string,
+    table2: string
+  ): Promise<boolean> {
+    const table1Checksum = await this.querySingle<{ Checksum: string }>(
+      pool,
+      ` CHECKSUM TABLE \`${database1}\`.\`${table1}\`;`
+    )
+    const table2Checksum = await this.querySingle<{ Checksum: string }>(
+      pool,
+      ` CHECKSUM TABLE \`${database2}\`.\`${table2}\`;`
+    )
+    return table1Checksum?.Checksum === table2Checksum?.Checksum
+  }
+
+  public async compareTableDdl(
+    pool: mysql.Pool,
+    database1: string,
+    table1: string,
+    database2: string,
+    table2: string
+  ): Promise<boolean> {
+    const table1Ddl = await this.querySingle<{ 'Create Table': string }>(
+      pool,
+      `SHOW CREATE TABLE \`${database1}\`.\`${table1}\`;`
+    )
+    const table2Ddl = await this.querySingle<{ 'Create Table': string }>(
+      pool,
+      `SHOW CREATE TABLE \`${database2}\`.\`${table2}\`;`
+    )
+    return table1Ddl?.['Create Table'] === table2Ddl?.['Create Table']
   }
 
   public async cloneTable(

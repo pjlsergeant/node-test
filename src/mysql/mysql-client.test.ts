@@ -1,8 +1,6 @@
 import { MySQLClient } from './mysql-client'
 import { MySQLServer } from './mysql-server'
 
-const formatHrDiff = (what: string, diff: [number, number]): string => `${what} ${diff[0]}s ${diff[1] / 1000000}ms`
-
 describe('MySQLClient', () => {
   let mySqlClient: MySQLClient
   beforeAll(async () => {
@@ -14,11 +12,24 @@ describe('MySQLClient', () => {
     await mySqlClient?.cleanup()
   })
 
-  it('Query test', async () => {
-    const copyTime = process.hrtime()
-    const pool = await mySqlClient.createDatabaseCopy('mysql') // copy time 0s 428.431469ms
-    console.log(formatHrDiff('copy time', process.hrtime(copyTime)))
+  it('should create a copy of mysql database and return the name', async () => {
+    const database = await mySqlClient.createDatabaseCopy('mysql')
+    const pool = await mySqlClient.getConnectionPool(database)
     const users = await mySqlClient.query<{ user: string }>(pool, `SELECT CONCAT(user, '@', host) AS user FROM user;`)
     expect(users.length).toBeGreaterThan(0)
+  })
+
+  it('should compare two tables', async () => {
+    const database = await mySqlClient.createDatabaseCopy('mysql')
+    const pool = await mySqlClient.getConnectionPool(database)
+    await expect(mySqlClient.compareTables(pool, 'mysql', 'user', database, 'user')).resolves.toEqual(true)
+    await expect(mySqlClient.compareTables(pool, 'mysql', 'db', database, 'user')).resolves.toEqual(false)
+  })
+
+  it('should compare two database', async () => {
+    const database = await mySqlClient.createDatabaseCopy('mysql')
+    const pool = await mySqlClient.getConnectionPool(database)
+    await expect(mySqlClient.compareDatabases(pool, 'mysql', database)).resolves.toEqual(true)
+    await expect(mySqlClient.compareDatabases(pool, 'db', database)).resolves.toEqual(false)
   })
 })
