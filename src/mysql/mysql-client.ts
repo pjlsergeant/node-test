@@ -79,7 +79,7 @@ export class MySQLClient {
   }
 
   // https://gist.github.com/christopher-hopper/8431737
-  public async createDatabaseCopy(database: string, tables: string[] = []): Promise<mysql.Pool> {
+  public async createDatabaseCopy(database: string, tables: string[] = []): Promise<string> {
     // TODO: Look into reusing the copied database "SELECT TABLE_NAME, UPDATE_TIME FROM information_schema.tables;"
     let pool: mysql.Pool | null = null
     try {
