@@ -45,7 +45,7 @@ describe('MySQLClient', () => {
         COMMENT 'Basic vehicle information';
       `
     )
-  }, 15000)
+  }, 20000)
 
   afterEach(async () => {
     await mySqlClient?.cleanup()

@@ -17,6 +17,7 @@ async function symlink(target: string, file: string): Promise<void> {
 module.exports = async () => {
   // Make sure wrapper has been compiled
   await execAsync('npm run build:js')
+  await symlink('build/dist/bin/run-wrapper.js', 'bin/run-wrapper.js')
   await symlink('build/dist/bin/run-wrapper.js', 'build/dist/bin/run-wrapper')
   await symlink('build/dist/bin/local-mysql.js', 'build/dist/bin/local-mysql')
   await symlink('build/dist/bin/cache-migrations.js', 'build/dist/bin/cache-migrations')
