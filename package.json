@@ -11,6 +11,7 @@
   "types": "build/dist/src/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
+    "local-mysql": "npm run build:js && build/dist/bin/local-mysql.js",
     "build": "build src bin",
     "build:js": "build --skip-typings -- src bin",
     "build:types": "tsc --emitDeclarationOnly",

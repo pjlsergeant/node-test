@@ -9,6 +9,17 @@ describe('local-mysql', () => {
     }
   })
 
+  it(`should start a local mysqld without any options`, async () => {
+    const tmpdir = await createTempDirectory()
+    const cmd = new RunProcess('local-mysql', [])
+    processCleanup.push(cmd)
+    await expect(cmd.waitForOutput(/mysqld: ready for connections/)).resolves.toMatchObject({
+      0: 'mysqld: ready for connections'
+    })
+    await cmd.kill('SIGTERM')
+    await expect(cmd.waitForExit()).resolves.toEqual({ code: 0, signal: null })
+  }, 10000)
+
   it(`should start a local mysqld and stop it on SIGTERM`, async () => {
     const tmpdir = await createTempDirectory()
     const cmd = new RunProcess('local-mysql', [`--mysqlBaseDir=${tmpdir}`])
