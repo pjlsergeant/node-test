@@ -1,0 +1,181 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`checks/audit converts failed audit 1`] = `
+Object {
+  "conclusion": "neutral",
+  "output": Object {
+    "summary": "Found **32** vulnerabilities (**23** low, **6** moderate, **2** high, **1** critical) in 965 scanned packages",
+    "text": "## Critical: Command Injection
+Affected versions of \`growl\` do not properly sanitize input prior to passing it into a shell command, allowing for arbitrary command execution.
+
+[Read about advisory 146 at nodesecurity.io](https://nodesecurity.io/advisories/146)
+
+#### growl (<1.10.2)
+ - **DEV:** \`mocha\` > \`growl\`
+
+#### Recommendation
+Update to version 1.10.2 or later.
+
+## High: Regular Expression Denial of Service
+Affected versions of \`tough-cookie\` are susceptible to a regular expression denial of service.
+
+The amplification on this vulnerability is relatively low - it takes around 2 seconds for the engine to execute on a malicious input which is 50,000 characters in length.
+
+If node was compiled using the \`-DHTTP_MAX_HEADER_SIZE\` however, the impact of the vulnerability can be significant, as the primary limitation for the vulnerability is the default max HTTP header length in node.
+
+[Read about advisory 525 at nodesecurity.io](https://nodesecurity.io/advisories/525)
+
+#### tough-cookie (<2.3.3)
+ - **DEV:** \`coveralls\` > \`request\` > \`tough-cookie\`
+
+#### Recommendation
+Update to version 2.3.3 or later.
+
+## High: Regular Expression Denial of Service
+Versions of \`sshpk\` before 1.14.1 are vulnerable to regular expression denial of service when parsing crafted invalid public keys.
+
+[Read about advisory 606 at nodesecurity.io](https://nodesecurity.io/advisories/606)
+
+#### sshpk (<1.14.1)
+ - **DEV:** \`coveralls\` > \`request\` > \`http-signature\` > \`sshpk\`
+
+#### Recommendation
+Update to version 1.14.1 or later.
+
+## Moderate: Prototype pollution
+Versions of \`hoek\` prior to 4.2.1 and 5.0.3 are vulnerable to prototype pollution.
+
+The \`merge\` function, and the \`applyToDefaults\` and \`applyToDefaultsWithShallow\` functions which leverage \`merge\` behind the scenes, are vulnerable to a prototype pollution attack when provided an _unvalidated_ payload created from a JSON string containing the \`__proto__\` property.
+
+This can be demonstrated like so:
+
+\`\`\`javascript
+var Hoek = require('hoek');
+var malicious_payload = '{\\"__proto__\\":{\\"oops\\":\\"It works !\\"}}';
+
+var a = {};
+console.log(\\"Before : \\" + a.oops);
+Hoek.merge({}, JSON.parse(malicious_payload));
+console.log(\\"After : \\" + a.oops);
+\`\`\`
+
+This type of attack can be used to overwrite existing properties causing a potential denial of service.
+
+[Read about advisory 566 at nodesecurity.io](https://nodesecurity.io/advisories/566)
+
+#### hoek (<= 4.2.0 || >= 5.0.0 < 5.0.3)
+ - **DEV:** \`coveralls\` > \`request\` > \`hawk\` > \`boom\` > \`hoek\`
+ - **DEV:** \`coveralls\` > \`request\` > \`hawk\` > \`cryptiles\` > \`boom\` > \`hoek\`
+ - **DEV:** \`coveralls\` > \`request\` > \`hawk\` > \`hoek\`
+ - **DEV:** \`coveralls\` > \`request\` > \`hawk\` > \`sntp\` > \`hoek\`
+
+#### Recommendation
+Update to version 4.2.1, 5.0.3 or later.
+
+## Moderate: Memory Exposure
+Versions of \`tunnel-agent\` before 0.6.0 are vulnerable to memory exposure.
+
+This is exploitable if user supplied input is provided to the auth value and is a number.
+
+Proof-of-concept:
+\`\`\`js
+require('request')({
+  method: 'GET',
+  uri: 'http://www.example.com',
+  tunnel: true,
+  proxy:{
+    protocol: 'http:',
+    host:'127.0.0.1',
+    port:8080,
+    auth:USERSUPPLIEDINPUT // number
+  }
+});
+\`\`\`
+
+[Read about advisory 598 at nodesecurity.io](https://nodesecurity.io/advisories/598)
+
+#### tunnel-agent (<0.6.0)
+ - **DEV:** \`coveralls\` > \`request\` > \`tunnel-agent\`
+
+#### Recommendation
+Update to version 0.6.0 or later.
+
+## Moderate: Out-of-bounds Read
+All versions of \`stringstream\` are vulnerable to out-of-bounds read as it allocates uninitialized Buffers when number is passed in input stream on Node.js 4.x and below.
+
+[Read about advisory 664 at nodesecurity.io](https://nodesecurity.io/advisories/664)
+
+#### stringstream (<=0.0.5)
+ - **DEV:** \`coveralls\` > \`request\` > \`stringstream\`
+
+#### Recommendation
+No fix is currently available for this vulnerability. It is our recommendation to not install or use this module if user input is being passed in to \`stringstream\`.
+
+
+## Low: Cryptographically Weak PRNG
+Affected versions of \`randomatic\` generate random values using a cryptographically weak psuedo-random number generator. This may result in predictable values instead of random values as intended.
+
+
+
+[Read about advisory 157 at nodesecurity.io](https://nodesecurity.io/advisories/157)
+
+#### randomatic (<3.0.0)
+ - **DEV:** \`nyc\` > \`micromatch\` > \`braces\` > \`expand-range\` > \`fill-range\` > \`randomatic\`
+ - **DEV:** \`nyc\` > \`test-exclude\` > \`micromatch\` > \`braces\` > \`expand-range\` > \`fill-range\` > \`randomatic\`
+
+#### Recommendation
+Update to version 3.0.0 or later.
+
+
+## Low: Regular Expression Denial of Service
+Affected versions of \`debug\` are vulnerable to regular expression denial of service when untrusted user input is passed into the \`o\` formatter. 
+
+As it takes 50,000 characters to block the event loop for 2 seconds, this issue is a low severity issue.
+
+[Read about advisory 534 at nodesecurity.io](https://nodesecurity.io/advisories/534)
+
+#### debug (<= 2.6.8 || >= 3.0.0 <= 3.0.1)
+ - **DEV:** \`babel-eslint\` > \`babel-traverse\` > \`debug\`
+ - **DEV:** \`eslint\` > \`debug\`
+ - **DEV:** \`mocha\` > \`debug\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-template\` > \`babel-traverse\` > \`debug\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-traverse\` > \`debug\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-source-maps\` > \`debug\`
+
+#### Recommendation
+Version 2.x.x: Update to version 2.6.9 or later.
+Version 3.x.x: Update to version 3.1.0 or later.
+
+
+## Low: Prototype Pollution
+Versions of \`lodash\` before 4.17.5 are vulnerable to prototype pollution. 
+
+The vulnerable functions are 'defaultsDeep', 'merge', and 'mergeWith' which allow a malicious user to modify the prototype of \`Object\` via \`__proto__\` causing the addition or modification of an existing property that will exist on all objects.
+
+
+
+[Read about advisory 577 at nodesecurity.io](https://nodesecurity.io/advisories/577)
+
+#### lodash (<4.17.5)
+ - **DEV:** \`babel-eslint\` > \`babel-traverse\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`babel-eslint\` > \`babel-traverse\` > \`lodash\`
+ - **DEV:** \`babel-eslint\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`eslint\` > \`inquirer\` > \`lodash\`
+ - **DEV:** \`eslint\` > \`lodash\`
+ - **DEV:** \`eslint\` > \`table\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-generator\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-generator\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-template\` > \`babel-traverse\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-template\` > \`babel-traverse\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-template\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-template\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-traverse\` > \`babel-types\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-traverse\` > \`lodash\`
+ - **DEV:** \`nyc\` > \`istanbul-lib-instrument\` > \`babel-types\` > \`lodash\`
+
+#### Recommendation
+Update to version 4.17.5 or later.",
+    "title": "npm audit security report",
+  },
+}
+`;

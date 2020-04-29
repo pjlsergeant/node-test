@@ -2,12 +2,12 @@
 
 import args from 'args'
 
-import { auditCheck, AuditInput } from '../src/checks/audit/audit'
-import { runAudit } from '../src/checks/audit/run-audit'
 import { eslintCheck, EslintInput } from '../src/checks/eslint/eslint'
 import { runEslint } from '../src/checks/eslint/run-eslint'
 import { jestCheck, JestInput } from '../src/checks/jest/jest'
 import { runJest, runReactScriptsTest } from '../src/checks/jest/run-jest'
+import { auditCheck, AuditInput } from '../src/checks/npm-audit/audit'
+import { runNpmAudit } from '../src/checks/npm-audit/run-audit'
 
 process.env.PATH = `./node_modules/.bin:${process.env.PATH}`
 
@@ -77,7 +77,7 @@ async function main() {
       desc: 'Runs audit with CI output',
       fn: async () => {
         try {
-          const result = await runAudit()
+          const result = await runNpmAudit()
           const auditInput: AuditInput = {
             data: result
           }

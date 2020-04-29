@@ -24,6 +24,7 @@ export interface Annotation {
   annotation_level: Level
   message: string
   raw_details: string
+  title?: string
 }
 
 export type Level = 'success' | 'failure' | 'neutral' | 'notice' | 'warning'

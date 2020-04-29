@@ -1,8 +1,8 @@
 import { CommandEmulation, RunProcess } from '../..'
-import { auditOneVuln } from './resources/audit-help-text'
-import { runAudit } from './run-audit'
+import { mochaSuccesfulOutput } from './resources/mocha-help-text'
+import { runMocha } from './run-mocha'
 
-describe('run-audit', () => {
+describe('run-mocha', () => {
   const commandEmulation = new CommandEmulation()
 
   afterAll(async () => {
@@ -17,17 +17,17 @@ describe('run-audit', () => {
     }
   })
 
-  it('should start an audit process and wait for exit', async () => {
+  it('should start a jest process and wait for exit', async () => {
     await commandEmulation.registerCommand(
-      'audit',
+      'mocha',
       data => {
         process.stdout.write(JSON.stringify(data))
         process.exit(0)
       },
       null,
-      auditOneVuln
+      mochaSuccesfulOutput
     )
-    const auditJson = await runAudit()
-    expect(auditJson).toEqual(auditOneVuln)
+    const mochaJson = await runMocha()
+    expect(mochaJson).toEqual(mochaSuccesfulOutput)
   })
 })
