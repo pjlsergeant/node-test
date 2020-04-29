@@ -18,7 +18,7 @@ export interface CheckOutput {
 
 export interface Annotation {
   path: string
-  blob_href: string
+  blob_href?: string
   start_line?: number
   end_line?: number
   annotation_level: Level

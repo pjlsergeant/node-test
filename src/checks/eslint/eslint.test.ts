@@ -102,19 +102,4 @@ describe('checks/eslint', () => {
       }
     })
   })
-
-  // it('processes passing jest output to checks structure', () => {
-  //   const data = JSON.parse(jestPassedOutput)
-
-  //   const output = jestCheck({ data, org: 'connectedcars', repo: 'mobile-app', sha: '1234567890' })
-  //   const expected = {
-  //     conclusion: 'success',
-  //     output: {
-  //       title: '33 of 33 tests passed!',
-  //       summary: '33 of 33 tests passed!',
-  //       annotations: []
-  //     }
-  //   }
-  //   expect(output).toStrictEqual(expected)
-  // })
 })

@@ -1,0 +1,67 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`checks/tsc converts successful failed tsc 1`] = `
+Object {
+  "conclusion": "failure",
+  "output": Object {
+    "annotations": Array [
+      Object {
+        "annotation_level": "failure",
+        "end_line": 4,
+        "message": "Declaration or statement expected.",
+        "path": "src/common.ts",
+        "raw_details": "{
+  \\"file\\": \\"src/common.ts\\",
+  \\"line\\": 4,
+  \\"col\\": 88,
+  \\"errorCode\\": \\"TS1128\\",
+  \\"message\\": \\"Declaration or statement expected.\\"
+}",
+        "start_line": 4,
+      },
+    ],
+    "summary": "1 error(s) found",
+    "title": "1 error(s) found",
+  },
+}
+`;
+
+exports[`checks/tsc converts successful failed tsc with multi errors 1`] = `
+Object {
+  "conclusion": "failure",
+  "output": Object {
+    "annotations": Array [
+      Object {
+        "annotation_level": "failure",
+        "end_line": 4,
+        "message": "Declaration or statement expected.",
+        "path": "src/common.ts",
+        "raw_details": "{
+  \\"file\\": \\"src/common.ts\\",
+  \\"line\\": 4,
+  \\"col\\": 88,
+  \\"errorCode\\": \\"TS1128\\",
+  \\"message\\": \\"Declaration or statement expected.\\"
+}",
+        "start_line": 4,
+      },
+      Object {
+        "annotation_level": "failure",
+        "end_line": 29,
+        "message": "Expression expected.",
+        "path": "src/index.ts",
+        "raw_details": "{
+  \\"file\\": \\"src/index.ts\\",
+  \\"line\\": 29,
+  \\"col\\": 14,
+  \\"errorCode\\": \\"TS1109\\",
+  \\"message\\": \\"Expression expected.\\"
+}",
+        "start_line": 29,
+      },
+    ],
+    "summary": "2 error(s) found",
+    "title": "2 error(s) found",
+  },
+}
+`;
