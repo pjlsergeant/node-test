@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/camelcase */
-import { CheckResult, GitData } from '../checks-common'
+import { CheckResult } from '../checks-common'
 
-export interface TscInput extends GitData {
+export interface TscInput {
   data: TscData[]
 }
 
-export const tscCheck = ({ data, org, repo, sha }: TscInput): CheckResult => {
+export const tscCheck = ({ data }: TscInput): CheckResult => {
   const result: CheckResult = {
     conclusion: 'success',
     output: {
