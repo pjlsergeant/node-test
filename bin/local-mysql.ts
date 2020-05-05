@@ -39,8 +39,9 @@ async function main(argv: string[]): Promise<number> {
     .parse(argv.slice(2))
 
   const mySqlServer = new MySQLServer({ mysqlBaseDir: flags.mysqlBaseDir })
+  const mysqlBaseDir = await mySqlServer.getMysqlBaseDir()
   console.log(
-    `MySQLd started with ${await mySqlServer.getInitStatus()} listening on port ${await mySqlServer.getListenPort()}`
+    `MySQLd started in ${mysqlBaseDir} (${await mySqlServer.getInitStatus()}) listening on port ${await mySqlServer.getListenPort()}`
   )
 
   if (await existsAsync(flags.migrationsDir)) {
@@ -67,8 +68,8 @@ async function main(argv: string[]): Promise<number> {
       // Ignore
     })
 
-  const stdoutFd = await openAsync(`${flags.mysqlBaseDir}/stdout.log`, 'r')
-  const stderrFd = await openAsync(`${flags.mysqlBaseDir}/stderr.log`, 'r')
+  const stdoutFd = await openAsync(`${mysqlBaseDir}/stdout.log`, 'r')
+  const stderrFd = await openAsync(`${mysqlBaseDir}/stderr.log`, 'r')
   let running = true
   let closing = false
   while (running) {
