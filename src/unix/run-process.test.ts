@@ -17,8 +17,9 @@ describe('run-process', () => {
   const processCleanup: Array<RunProcess> = []
   afterEach(async () => {
     // Make sure all process are stopped
-    for (const process of processCleanup) {
-      await process.stop()
+    while (processCleanup.length > 0) {
+      const process = processCleanup.shift()
+      await process?.stop()
     }
   })
 
@@ -159,5 +160,14 @@ describe('run-process', () => {
     expect(() => {
       cmd.kill()
     }).toThrow(ProcessNotRunningError)
+  })
+
+  it('should not hang .on("exit") if a command does not exist', async () => {
+    const cmd = new RunProcess('my-command-that-does-not-exist')
+    const exitPromise = new Promise(resolve => cmd.on('exit', (code, signal) => resolve({ code, signal })))
+    await expect(exitPromise).resolves.toMatchObject({
+      code: null,
+      signal: null
+    })
   })
 })

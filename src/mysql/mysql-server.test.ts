@@ -18,7 +18,7 @@ async function query<T>(connection: mysql.Connection, sql: string): Promise<T[]>
   })
 }
 
-describe('MySQLServer startup', () => {
+describe('MySQLServer', () => {
   let tmpDir = ''
   beforeAll(async () => {
     tmpDir = await createTempDirectory()
@@ -63,4 +63,15 @@ describe('MySQLServer startup', () => {
       await mySqlServer?.kill()
     }
   }, 20000)
+
+  it('should throw an error when mysqld is not installed', async () => {
+    const oldPath = process.env.PATH
+    try {
+      process.env.PATH = ''
+      const mySqlServer = new MySQLServer({ mysqlBaseDir: tmpDir })
+      await expect(mySqlServer.waitForStarted()).rejects.toThrow('spawn mysqld ENOENT')
+    } finally {
+      process.env.PATH = oldPath
+    }
+  })
 })
