@@ -169,5 +169,6 @@ describe('run-process', () => {
       code: null,
       signal: null
     })
+    await expect(cmd.waitForExit()).rejects.toThrow('spawn my-command-that-does-not-exist ENOENT')
   })
 })
