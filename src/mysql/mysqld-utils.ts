@@ -23,7 +23,7 @@ export async function getMySQLServerVersionString(mysqldPath: string): Promise<s
   cmd.stderr?.on('data', chunk => {
     outputData.push(chunk)
   })
-  const code = await new Promise<number>(resolve => cmd.on('exit', code => resolve(code || 0)))
+  const { code } = await cmd.waitForExit()
   const stdout = Buffer.concat(outputData).toString('utf8')
   if (code !== 0) {
     throw new Error(`${mysqldPath} --version returned non 0 exit code:\n${stdout}`)
@@ -40,7 +40,7 @@ export async function getMySQLServerConfig(mysqldPath: string, mysqlBaseDir: str
   cmd.stderr?.on('data', chunk => {
     outputData.push(chunk)
   })
-  const code = await new Promise<number>(resolve => cmd.on('exit', code => resolve(code || 0)))
+  const { code } = await cmd.waitForExit()
   const output = Buffer.concat(outputData).toString('utf8')
   if (code !== 0) {
     throw new Error(`Failed to dump configuration(${mysqldPath} --help --verbose): \n${output}\n`)
@@ -121,8 +121,8 @@ export async function initializeMySQLData(mysqldPath: string, mysqlBaseDir: stri
   cmd.stderr?.on('data', chunk => {
     initializeLog += chunk.toString('utf8')
   })
-  const exitInfo = await cmd.waitForExit()
-  if (exitInfo.code !== 0) {
+  const { code } = await cmd.waitForExit()
+  if (code !== 0) {
     throw new Error(`Failed to initialize ${mysqldPath}: ${initializeLog}`)
   }
 }
@@ -152,8 +152,8 @@ export async function createMySQLDataCache(mysqlBaseDir: string, initializeDataT
   cmd.stdout?.on('data', chunk => data.push(chunk))
   cmd.stderr?.on('data', chunk => data.push(chunk))
   await cmd.waitForStarted()
-  const exitInfo = await cmd.waitForExit()
-  if (exitInfo.code !== 0) {
+  const { code } = await cmd.waitForExit()
+  if (code !== 0) {
     const output = Buffer.concat(data).toString('utf8')
     throw new Error(`Failed to create ${initializeDataTarGz} of cached data in ${mysqlBaseDir}\n${output}`)
   }
@@ -173,8 +173,8 @@ export async function dumpDatabase(port: number, databases: string[], dumpFile: 
   const dumpFileStream = fs.createWriteStream(dumpFile)
   cmd.stdout?.pipe(dumpFileStream)
   await cmd.waitForStarted()
-  const exitInfo = await cmd.waitForExit()
-  if (exitInfo.code !== 0) {
+  const { code } = await cmd.waitForExit()
+  if (code !== 0) {
     const output = Buffer.concat(data).toString('utf8')
     throw new Error(`Failed to dump ${databases.join(', ')} to ${dumpFile}\n${output}`)
   }
