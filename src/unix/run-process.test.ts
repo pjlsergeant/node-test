@@ -171,4 +171,42 @@ describe('run-process', () => {
     })
     await expect(cmd.waitForExit()).rejects.toThrow('spawn my-command-that-does-not-exist ENOENT')
   })
+
+  it('should not fail with /dev/stdout: No such device or address', async () => {
+    const script = await commandEmulation.registerCommand(
+      'dev-stdout.sh',
+      [
+        'state=/dev/stdout',
+        'logfile=/dev/null',
+        '# helper to write output to a log file',
+        'do_log() {',
+        '    tee -a "$logfile"',
+        '}',
+        '# print a pretty status message to log/console',
+        'do_state() {',
+        '    echo "',
+        '#',
+        '# $@',
+        '#',
+        '"  | do_log > $state',
+        '}',
+        'do_state hellohello'
+      ].join('\n'),
+      '/bin/bash'
+    )
+    console.log(script)
+
+    const cmd = new RunProcess('dev-stdout.sh')
+    const data: Buffer[] = []
+    cmd.stdout?.on('data', chunk => {
+      data.push(chunk)
+    })
+    cmd.stderr?.on('data', chunk => {
+      data.push(chunk)
+    })
+
+    await cmd.waitForExit()
+    const output = Buffer.concat(data).toString('utf8')
+    expect(output).toEqual('\n#\n# hellohello\n#\n\n')
+  })
 })
