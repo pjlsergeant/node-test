@@ -1,25 +1,27 @@
 {
   "name": "@connectedcars/test",
-  "version": "0.7.0",
+  "version": "0.9.1",
   "description": "Test utilities for Node projects",
   "main": "build/dist/src/index.js",
-  "types": "build/dist/src/index.d.ts",
   "bin": {
+    "run-wrapper": "build/dist/bin/run-wrapper.js",
+    "local-mysql": "build/dist/bin/local-mysql.js",
+    "cache-migrations": "build/dist/bin/cache-migrations.js",
     "checks": "build/dist/bin/checks.js"
   },
+  "types": "build/dist/src/index.d.ts",
   "scripts": {
     "test": "TZ=UTC jest",
-    "build": "npm run build:types && npm run build:js:src && npm run build:js:bin",
-    "build:js": "npm run build:js:src",
-    "build:js:src": "babel src --out-dir ./build/dist/src --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
-    "build:js:bin": "babel bin --out-dir ./build/dist/bin --extensions '.ts' --source-maps --ignore '**/*.d.ts','src/**/*.test.ts'",
+    "build": "build src bin",
+    "build:js": "build --skip-typings -- src bin",
+    "local-mysql": "npm run build:js && build/dist/bin/local-mysql.js",
     "build:types": "tsc --emitDeclarationOnly",
-    "lint": "eslint './src/**/*.{ts,tsx}'",
-    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}'",
+    "lint": "eslint './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
+    "lint:fix": "eslint --fix './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}'",
     "prepare": "npm run build",
     "ci-jest": "TZ=UTC jest --silent --no-color --json 2> /dev/null; res=$?; echo; exit $res",
     "ci-audit": "npm audit --json || true",
-    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' || true",
+    "ci-eslint": "eslint --format json './src/**/*.{ts,tsx}' './bin/**/*.{ts,tsx}' || true",
     "cov": "TZ=UTC jest --coverage=true"
   },
   "repository": {
@@ -48,6 +50,7 @@
     "@types/lodash": "^4.14.149",
     "@types/node": "^13.9.1",
     "@types/sinon": "^7.5.2",
+    "@types/yargs": "^15.0.4",
     "@typescript-eslint/eslint-plugin": "2.24.0",
     "@typescript-eslint/parser": "2.24.0",
     "args": "^5.0.1",
@@ -62,7 +65,12 @@
     "typescript": "3.8.3"
   },
   "dependencies": {
-    "sinon": "^9.0.1"
+    "@types/mysql": "*",
+    "@types/node": "*",
+    "@types/sinon": "*",
+    "mysql": "^2.18.1",
+    "sinon": "^9.0.1",
+    "yargs": "^15.3.0"
   },
   "engines": {
     "node": ">=12.10.0"

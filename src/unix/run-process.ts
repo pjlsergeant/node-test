@@ -27,62 +27,67 @@ export class RunProcess {
   private errorListeners: Array<(err: Error) => void> = []
   private exitListeners: Array<(code: number | null, signal: NodeJS.Signals | null) => void> = []
 
-  public constructor(command: string, args?: string[], options?: Parameters<typeof spawn>[2]) {
+  public constructor(command: string, args: string[] = [], options?: Parameters<typeof spawn>[2]) {
     // Jest does not give access to global process.env so make sure we use the copy we have in the test
     options = { env: process.env, ...options }
-    this.cmd = spawn(command, args || [], options)
+    this.cmd = spawn(command, args, options)
     this.detached = options.detached ? options.detached : false
+
+    let exitPromise: Promise<ExitInformation>
     if (this.cmd.pid) {
-      // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
+      this.running = true
+      this.startPromise = Promise.resolve()
       this.pid = this.cmd.pid
+
+      // Don't allow attach to stdin if the process was not created as it seems to hang NodeJS
       this.stdin = this.cmd.stdin
       this.stdout = this.cmd.stdout
       this.stderr = this.cmd.stderr
-    }
 
-    // Capture the error the fork/exec failed, fx. if the file does not exists or access errors
-    if (this.pid) {
-      this.running = true
-      this.startPromise = Promise.resolve()
+      if (this.detached) {
+        this.cmd.unref()
+        this.running = false
+        exitPromise = Promise.resolve({ code: 0, signal: null })
+      } else {
+        exitPromise = new Promise(resolve => {
+          this.cmd.on('exit', (code, signal) => {
+            this.running = false
+            resolve({ code, signal })
+          })
+        })
+      }
     } else {
+      // Capture the error if fork/exec failed and resolve other promises, fx. if the file does not exists or access errors
       this.running = false
-      this.startPromise = new Promise<void>((_, reject) => this.cmd.on('error', reject))
-    }
-
-    let exitPromise: Promise<ExitInformation>
-    if (this.detached) {
-      this.cmd.unref()
-      this.running = false
-      exitPromise = Promise.resolve({ code: 0, signal: null })
-    } else {
-      exitPromise = new Promise(resolve => {
-        this.cmd.on('exit', (code, signal) => {
-          this.running = false
-          resolve({ code, signal })
+      this.startPromise = new Promise<void>((_, reject) => {
+        this.cmd.on('error', e => {
+          reject(e)
         })
       })
+      exitPromise = Promise.resolve({ code: null, signal: null })
     }
 
-    const stdoutPromise: Promise<void> = this.cmd.stdout
-      ? new Promise<void>(resolve => this.cmd.stdout?.on('end', resolve))
+    const stdoutPromise: Promise<void> = this.stdout
+      ? new Promise<void>(resolve => this.stdout?.on('end', resolve))
       : Promise.resolve()
-    const stderrPromise: Promise<void> = this.cmd.stderr
-      ? new Promise<void>(resolve => this.cmd.stderr?.on('end', resolve))
+    const stderrPromise: Promise<void> = this.stderr
+      ? new Promise<void>(resolve => this.stderr?.on('end', resolve))
       : Promise.resolve()
 
     this.stopPromise = Promise.all([this.startPromise, exitPromise, stdoutPromise, stderrPromise]).then(result => {
       this.stopped = true
+      for (const listener of this.exitListeners) {
+        listener(result[1].code, result[1].signal)
+      }
       return result[1]
     })
-    this.stopPromise
-      .then(res => {
-        for (const listener of this.exitListeners) {
-          listener(res.code, res.signal)
-        }
-      })
-      .catch(() => {
-        // User might never bind to this promise if they are just starting a process not caring about if it runs on not
-      })
+    this.stopPromise.catch(() => {
+      this.stopped = true
+      // Make sure we call the exit listeners
+      for (const listener of this.exitListeners) {
+        listener(null, null)
+      }
+    })
   }
 
   public async stop(sigKillTimeout = 3000, error?: Error): Promise<ExitInformation> {

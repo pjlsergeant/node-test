@@ -1,4 +1,6 @@
 export * from './command-emulation'
 export * from './fs'
+export * from './linux'
 export * from './run-process'
 export * from './process'
+export * from './errors'

@@ -33,3 +33,6 @@ typings/
 build/
 /.vscode
 .DS_Store
+
+/mysql-context
+/cache
