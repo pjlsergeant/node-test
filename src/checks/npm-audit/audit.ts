@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/camelcase */
 import { CheckResult } from '../checks-common'
-import { AuditData, Vulnerabilities } from './audit-types'
+import { Advisory, AuditData, Vulnerabilities } from './audit-types'
 
 export interface AuditInput {
   data: AuditData
@@ -39,7 +38,7 @@ const severities: SeverityMap = {
 
 const getText = (data: AuditData): string => {
   const advisories = Object.values(data.advisories)
-  advisories.sort((a: any, b: any) => severities[b.severity] - severities[a.severity])
+  advisories.sort((a: Advisory, b: Advisory) => severities[b.severity] - severities[a.severity])
   const entries: string[] = []
   for (const advisory of advisories) {
     const severity = advisory.severity.substr(0, 1).toUpperCase() + advisory.severity.substr(1)

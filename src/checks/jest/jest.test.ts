@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/camelcase */
+
+import { FormattedTestResults } from '@jest/test-result/build/types'
+
 import { CheckResult } from '../checks-common'
 import { jestCheck } from './jest'
 import { jestFailedOutput, jestPassedOutput } from './resources/jest-help-text'
@@ -46,22 +49,23 @@ describe('checks/jest', () => {
 
     expect(output).toStrictEqual(expected)
   })
-  // it('handles empty input', () => {
-  //   const sampleOutput = ''
-  //   const output = jestCheck({
-  //     data: (sampleOutput as unknown) as JestOutput,
-  //     org: 'connectedcars',
-  //     repo: 'mobile-app',
-  //     sha: '1234567890'
-  //   })
-  //   const expected = {
-  //     conclusion: 'neutral',
-  //     output: {
-  //       title: 'No tests found',
-  //       summary: 'No tests found',
-  //       annotations: []
-  //     }
-  //   }
-  //   expect(output).toStrictEqual(expected)
-  // })
+
+  it('handles empty input', () => {
+    const sampleOutput = ''
+    const output = jestCheck({
+      data: (sampleOutput as unknown) as FormattedTestResults,
+      org: 'connectedcars',
+      repo: 'mobile-app',
+      sha: '1234567890'
+    })
+    const expected = {
+      conclusion: 'neutral',
+      output: {
+        title: 'No tests found',
+        summary: 'No tests found',
+        annotations: []
+      }
+    }
+    expect(output).toStrictEqual(expected)
+  })
 })
