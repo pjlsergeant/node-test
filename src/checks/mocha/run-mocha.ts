@@ -1,8 +1,6 @@
-import { FormattedTestResults } from '@jest/test-result/build/types'
-
 import { RunProcess } from '../../unix/run-process'
 
-export async function runMocha(command = 'mocha', extraArgs: string[] = []): Promise<FormattedTestResults> {
+export async function runMocha(command = 'mocha', extraArgs: string[] = []): Promise<MochaData> {
   const cmd = new RunProcess(command, [...extraArgs, 'src/**/*.test.js', '--reporter=json'], {
     env: { ...process.env, TZ: 'UTC' }
   })

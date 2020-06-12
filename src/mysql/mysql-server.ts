@@ -221,7 +221,7 @@ export class MySQLServer {
     const startTime = process.hrtime()
     this.mysqldPid = await startMySQLd(this.mysqldPath, this.mysqlBaseDir, [`--port=${this.listenPort}`])
     this.timings.push(formatHrDiff('startMySQLd', process.hrtime(startTime)))
-    await writeFileAsync(`${path.join(this.mysqlBaseDir, '/mysqld.port')}`, this.listenPort)
+    await writeFileAsync(`${path.join(this.mysqlBaseDir, '/mysqld.port')}`, `${this.listenPort}`)
     this.initStatus = initialized ? 'initialized' : 'started'
     if (startingPidFile) {
       await unlinkAsync(startingPidFile).catch(() => {

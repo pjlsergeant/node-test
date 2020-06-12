@@ -99,7 +99,7 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (flags.pidFile) {
-    await writeFileAsync(flags.pidFile, process.pid)
+    await writeFileAsync(flags.pidFile, `${process.pid}`)
   }
 
   await cmd.waitForStarted()

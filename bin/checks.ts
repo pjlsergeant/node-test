@@ -6,8 +6,12 @@ import { eslintCheck, EslintInput } from '../src/checks/eslint/eslint'
 import { runEslint } from '../src/checks/eslint/run-eslint'
 import { jestCheck, JestInput } from '../src/checks/jest/jest'
 import { runJest, runReactScriptsTest } from '../src/checks/jest/run-jest'
+import { mochaCheck, MochaInput } from '../src/checks/mocha/mocha'
+import { runMocha } from '../src/checks/mocha/run-mocha'
 import { auditCheck, AuditInput } from '../src/checks/npm-audit/audit'
 import { runNpmAudit } from '../src/checks/npm-audit/run-audit'
+import { runTsc } from '../src/checks/tsc/run-tsc'
+import { tscCheck } from '../src/checks/tsc/tsc'
 const { REPO_NAME, COMMIT_SHA } = process.env
 
 process.env.PATH = `./node_modules/.bin:${process.env.PATH}`
@@ -56,6 +60,25 @@ async function main() {
         }
       }
     },
+    'mocha-ci': {
+      desc: 'Runs Mocha with CI output',
+      fn: async () => {
+        try {
+          const result = await runMocha()
+          const mochaInput: MochaInput = {
+            data: result,
+            org: 'connectedcars', // TODO: Can we extact this from current env vars?
+            repo: REPO_NAME || '',
+            sha: COMMIT_SHA || ''
+          }
+          console.log(result)
+          const checkOutput = mochaCheck(mochaInput)
+          console.log(JSON.stringify(checkOutput, null, 2))
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    },
     'eslint-ci': {
       desc: 'Runs Eslint with CI output',
       fn: async () => {
@@ -83,6 +106,18 @@ async function main() {
             data: result
           }
           const checkOutput = auditCheck(auditInput)
+          console.log(JSON.stringify(checkOutput, null, 2))
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    },
+    'tsc-ci': {
+      desc: 'Runs tsc with CI output',
+      fn: async () => {
+        try {
+          const result = await runTsc()
+          const checkOutput = tscCheck({ data: result })
           console.log(JSON.stringify(checkOutput, null, 2))
         } catch (error) {
           console.error(error)

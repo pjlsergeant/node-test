@@ -69,7 +69,7 @@ export async function stopPid(pid: number, sigKillTimeout = 3000): Promise<boole
 export async function writePidFile(pidFile: string, acquireTries = 10): Promise<void> {
   for (let i = 0; i < acquireTries; i++) {
     try {
-      await fsWriteFileAsync(pidFile, process.pid, { flag: 'wx' })
+      await fsWriteFileAsync(pidFile, `${process.pid}`, { flag: 'wx' })
       return
     } catch (e) {
       const pid = await readPidFile(pidFile)
