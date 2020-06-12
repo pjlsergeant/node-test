@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/camelcase */
 
 import args from 'args'
 
+import { printSummary } from '../src/checks/checks-common'
 import { eslintCheck, EslintInput } from '../src/checks/eslint/eslint'
 import { runEslint } from '../src/checks/eslint/run-eslint'
 import { jestCheck, JestInput } from '../src/checks/jest/jest'
@@ -17,6 +19,13 @@ const { REPO_NAME, COMMIT_SHA } = process.env
 process.env.PATH = `./node_modules/.bin:${process.env.PATH}`
 
 async function main() {
+  args.options([
+    {
+      name: 'ci',
+      description: 'Only output json'
+    }
+  ])
+
   const commands: {
     [key: string]: {
       desc: string
@@ -25,7 +34,7 @@ async function main() {
   } = {
     'jest-ci': {
       desc: 'Runs Jest with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runJest()
           const jestInput: JestInput = {
@@ -36,6 +45,7 @@ async function main() {
           }
           const checkOutput = jestCheck(jestInput)
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }
@@ -43,7 +53,7 @@ async function main() {
     },
     'jest-cra-ci': {
       desc: 'Runs Jest with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runReactScriptsTest()
           const jestInput: JestInput = {
@@ -55,6 +65,7 @@ async function main() {
           console.log(result)
           const checkOutput = jestCheck(jestInput)
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }
@@ -62,7 +73,7 @@ async function main() {
     },
     'mocha-ci': {
       desc: 'Runs Mocha with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runMocha()
           const mochaInput: MochaInput = {
@@ -74,6 +85,7 @@ async function main() {
           console.log(result)
           const checkOutput = mochaCheck(mochaInput)
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }
@@ -81,7 +93,7 @@ async function main() {
     },
     'eslint-ci': {
       desc: 'Runs Eslint with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runEslint()
           const eslintInput: EslintInput = {
@@ -92,6 +104,7 @@ async function main() {
           }
           const checkOutput = eslintCheck(eslintInput)
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }
@@ -99,7 +112,7 @@ async function main() {
     },
     'audit-ci': {
       desc: 'Runs audit with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runNpmAudit()
           const auditInput: AuditInput = {
@@ -107,6 +120,7 @@ async function main() {
           }
           const checkOutput = auditCheck(auditInput)
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }
@@ -114,11 +128,12 @@ async function main() {
     },
     'tsc-ci': {
       desc: 'Runs tsc with CI output',
-      fn: async () => {
+      fn: async (name, sub, options) => {
         try {
           const result = await runTsc()
           const checkOutput = tscCheck({ data: result })
           console.log(JSON.stringify(checkOutput, null, 2))
+          printSummary(checkOutput, options.ci)
         } catch (error) {
           console.error(error)
         }

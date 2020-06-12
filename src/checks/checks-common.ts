@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/camelcase */
 export interface GitData {
   org: string
   repo: string
@@ -28,3 +29,28 @@ export interface Annotation {
 }
 
 export type Level = 'success' | 'failure' | 'neutral' | 'notice' | 'warning'
+
+export const printSummary = (checkResult: CheckResult, ci?: boolean): void => {
+  console.log(JSON.stringify(checkResult, null, 2))
+
+  const { output } = checkResult
+
+  // Skip the 'human readable' output if we have ci flag
+  if (ci) {
+    return
+  }
+
+  console.log(output.summary)
+  const annotations = output.annotations || []
+  for (const annotation of annotations) {
+    const { annotation_level, message, start_line, end_line, path } = annotation
+    let location = ''
+
+    if (path) {
+      const lines = start_line && end_line ? ` line ${start_line}:${end_line}` : ''
+      location = `(${path}${lines})`
+    }
+
+    console.log(`\t- ${annotation_level}: ${message} ${location}`)
+  }
+}
