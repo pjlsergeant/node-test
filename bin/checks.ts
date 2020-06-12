@@ -8,6 +8,7 @@ import { jestCheck, JestInput } from '../src/checks/jest/jest'
 import { runJest, runReactScriptsTest } from '../src/checks/jest/run-jest'
 import { auditCheck, AuditInput } from '../src/checks/npm-audit/audit'
 import { runNpmAudit } from '../src/checks/npm-audit/run-audit'
+const { REPO_NAME, COMMIT_SHA } = process.env
 
 process.env.PATH = `./node_modules/.bin:${process.env.PATH}`
 
@@ -25,9 +26,9 @@ async function main() {
           const result = await runJest()
           const jestInput: JestInput = {
             data: result,
-            org: 'null',
-            repo: 'null',
-            sha: 'null'
+            org: 'connectedcars', // TODO: Can we extact this from current env vars?
+            repo: REPO_NAME || '',
+            sha: COMMIT_SHA || ''
           }
           const checkOutput = jestCheck(jestInput)
           console.log(JSON.stringify(checkOutput, null, 2))
@@ -43,9 +44,9 @@ async function main() {
           const result = await runReactScriptsTest()
           const jestInput: JestInput = {
             data: result,
-            org: 'null',
-            repo: 'null',
-            sha: 'null'
+            org: 'connectedcars', // TODO: Can we extact this from current env vars?
+            repo: REPO_NAME || '',
+            sha: COMMIT_SHA || ''
           }
           console.log(result)
           const checkOutput = jestCheck(jestInput)
@@ -62,9 +63,9 @@ async function main() {
           const result = await runEslint()
           const eslintInput: EslintInput = {
             data: result,
-            org: 'null',
-            repo: 'null',
-            sha: 'null'
+            org: 'connectedcars', // TODO: Can we extact this from current env vars?
+            repo: REPO_NAME || '',
+            sha: COMMIT_SHA || ''
           }
           const checkOutput = eslintCheck(eslintInput)
           console.log(JSON.stringify(checkOutput, null, 2))
