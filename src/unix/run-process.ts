@@ -131,7 +131,7 @@ export class RunProcess {
       if (await waitFor(this.stopPromise, timeout)) {
         return await this.stopPromise
       }
-      throw new TimeoutError()
+      throw new TimeoutError(`Timed out waiting for exit`)
     }
     return await this.stopPromise
   }
@@ -245,7 +245,7 @@ export class RunProcess {
 
   public kill(signal?: NodeJS.Signals): boolean {
     if (!this.running) {
-      throw new ProcessNotRunningError()
+      throw new ProcessNotRunningError(`Process not running while trying to run .kill()`)
     }
     return this.cmd.kill(signal)
   }
