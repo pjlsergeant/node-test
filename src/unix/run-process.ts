@@ -142,9 +142,10 @@ export class RunProcess {
     outputs: Array<'stdout' | 'stderr'> = ['stdout', 'stderr']
   ): Promise<RegExpMatchArray> {
     const listeners: Array<['stdout' | 'stderr', (chunk: Buffer) => void]> = []
+    let timeoutHandle: NodeJS.Timeout | null = null
+
     try {
       return await new Promise((resolve, reject) => {
-        let timeoutHandle: NodeJS.Timeout | null = null
         if (timeout) {
           timeoutHandle = setTimeout(() => reject(new TimeoutError()), timeout)
         }
@@ -156,9 +157,6 @@ export class RunProcess {
             data += chunk.toString('utf8')
             const match = data.match(regex)
             if (match) {
-              if (timeoutHandle) {
-                clearTimeout(timeoutHandle)
-              }
               resolve(match)
             }
           }
@@ -172,6 +170,10 @@ export class RunProcess {
         })
       })
     } finally {
+      // Clear the timeout if we find input or not
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle)
+      }
       // Make sure we stop listening when match is found
       for (const [output, listener] of listeners) {
         this[output]?.removeListener('data', listener)

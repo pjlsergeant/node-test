@@ -171,4 +171,17 @@ describe('run-process', () => {
     })
     await expect(cmd.waitForExit()).rejects.toThrow('spawn my-command-that-does-not-exist ENOENT')
   })
+
+  it('should not hang on waitForExit(), if the timeout is longer than the process runtime', async () => {
+    await commandEmulation.registerCommand('hangingTooLongTimeout', async () => {
+      console.log(`started`)
+      setTimeout(() => {
+        console.log(`hello`)
+      }, 100)
+    })
+    processCleanup.push()
+
+    const cmd = new RunProcess(`hangingTooLongTimeout`)
+    await expect(cmd.waitForOutput(new RegExp(`never comes up`), 2000)).rejects.toThrow(`started\nhello\n`)
+  })
 })
